@@ -1,0 +1,98 @@
+node_modules/
+.env
+.DS_Store
+*.log
+dist/
+build/
+# ==========================
+# Node.js / Express backend
+# ==========================
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
+pnpm-debug.log*
+.env
+.env.local
+.env.*.local
+.npmrc
+.cache/
+tmp/
+temp/
+logs/
+*.log
+
+# ==========================
+# React frontend
+# ==========================
+# Build output
+/build
+/dist
+/out
+/.next
+/.vercel
+/.parcel-cache
+
+# Local env files
+.env.development.local
+.env.test.local
+.env.production.local
+
+# IDE and OS junk
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+.DS_Store
+Thumbs.db
+
+# ==========================
+# Database and data dumps
+# ==========================
+/database/*.sql
+*.sql
+*.dump
+*.bak
+*.backup
+
+# ==========================
+# Logs and runtime data
+# ==========================
+/pids
+*.pid
+*.seed
+*.pid.lock
+*.gz
+*.tgz
+
+# ==========================
+# Test coverage
+# ==========================
+/coverage
+/.nyc_output
+
+# ==========================
+# Build tools and misc
+# ==========================
+/bower_components
+/.eslintcache
+/.stylelintcache
+/.parcel-cache
+/.cache-loader
+*.tsbuildinfo
+/.turbo
+/.idea
+/.envrc
+/.editorconfig
+*.iml
+
+# ==========================
+# OS / Platform-specific
+# ==========================
+ehthumbs.db
+Icon?
+Desktop.ini

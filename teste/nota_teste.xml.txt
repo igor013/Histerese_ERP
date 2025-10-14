@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<nfeProc xmlns="http://www.portalfiscal.inf.br/nfe" versao="4.00">
+  <NFe>
+    <infNFe Id="NFe35250100000000000000550010000001231000001231" versao="4.00">
+      <ide>
+        <cUF>35</cUF>
+        <cNF>00001231</cNF>
+        <natOp>VENDA DE MERCADORIA</natOp>
+        <mod>55</mod>
+        <serie>1</serie>
+        <nNF>1231</nNF>
+        <dhEmi>2025-10-10T14:30:00-03:00</dhEmi>
+        <tpNF>1</tpNF>
+        <idDest>1</idDest>
+        <cMunFG>3550308</cMunFG>
+        <tpImp>1</tpImp>
+        <tpEmis>1</tpEmis>
+        <cDV>5</cDV>
+        <tpAmb>2</tpAmb>
+        <finNFe>1</finNFe>
+        <indFinal>1</indFinal>
+        <indPres>1</indPres>
+        <procEmi>0</procEmi>
+        <verProc>ERP-Histerese-1.0</verProc>
+      </ide>
+
+      <emit>
+        <CNPJ>11222333000144</CNPJ>
+        <xNome>FORNECEDOR ELETRONICA LTDA</xNome>
+        <xFant>FORNECEDOR ELETRONICA</xFant>
+        <enderEmit>
+          <xLgr>Rua dos Transistores</xLgr>
+          <nro>200</nro>
+          <xBairro>Centro</xBairro>
+          <cMun>3550308</cMun>
+          <xMun>Sao Paulo</xMun>
+          <UF>SP</UF>
+          <CEP>01000000</CEP>
+          <cPais>1058</cPais>
+          <xPais>Brasil</xPais>
+          <fone>1133345566</fone>
+        </enderEmit>
+        <IE>1234567890</IE>
+        <CRT>3</CRT>
+      </emit>
+
+      <dest>
+        <CNPJ>99887766000155</CNPJ>
+        <xNome>HISTERESE MANUTENCAO DE MAQUINAS LTDA</xNome>
+        <enderDest>
+          <xLgr>Av. das Soldas</xLgr>
+          <nro>999</nro>
+          <xBairro>Industrial</xBairro>
+          <cMun>3203908</cMun>
+          <xMun>NOVA VENECIA</xMun>
+          <UF>ES</UF>
+          <CEP>29830000</CEP>
+          <cPais>1058</cPais>
+          <xPais>Brasil</xPais>
+          <fone>27999999999</fone>
+        </enderDest>
+        <indIEDest>1</indIEDest>
+        <IE>12345678</IE>
+      </dest>
+
+      <det nItem="1">
+        <prod>
+          <cProd>RHRP1560</cProd>
+          <xProd>Diodo RHRP1560 600V 15A</xProd>
+          <NCM>85411000</NCM>
+          <CFOP>5102</CFOP>
+          <uCom>UN</uCom>
+          <qCom>10.00</qCom>
+          <vUnCom>6.80</vUnCom>
+          <vProd>68.00</vProd>
+        </prod>
+      </det>
+
+      <det nItem="2">
+        <prod>
+          <cProd>LNK628PG</cProd>
+          <xProd>CI Regulador LNK628PG</xProd>
+          <NCM>85423911</NCM>
+          <CFOP>5102</CFOP>
+          <uCom>UN</uCom>
+          <qCom>5.00</qCom>
+          <vUnCom>9.50</vUnCom>
+          <vProd>47.50</vProd>
+        </prod>
+      </det>
+
+      <total>
+        <ICMSTot>
+          <vBC>0.00</vBC>
+          <vICMS>0.00</vICMS>
+          <vProd>115.50</vProd>
+          <vNF>115.50</vNF>
+        </ICMSTot>
+      </total>
+    </infNFe>
+  </NFe>
+</nfeProc>
