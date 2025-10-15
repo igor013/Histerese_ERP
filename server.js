@@ -1,6 +1,7 @@
 const express = require("express");
 const cors = require("cors");
 const dotenv = require("dotenv");
+const path = require("path"); // ✅ precisa disso
 const { pool } = require("./src/config/db");
 
 // Carregar variáveis de ambiente (.env)
@@ -19,8 +20,8 @@ const produtoRoutes = require("./src/routes/produtoRoutes");
 const notaRoutes = require("./src/routes/notaRoutes");
 const clienteRoutes = require("./src/routes/clienteRoutes");
 const equipamentoRoutes = require("./src/routes/equipamentoRoutes");
-
-
+const uploadRoutes = require("./src/routes/uploadRoutes");
+const errorHandler = require('./src/middlewares/errorHandler');
 
 // Rotas base
 app.use("/api/empresas", empresaRoutes);
@@ -28,7 +29,12 @@ app.use("/api/usuarios", usuarioRoutes);
 app.use("/api/produtos", produtoRoutes);
 app.use("/api/notas", notaRoutes);
 app.use("/api/clientes", clienteRoutes);
-app.use('/api/equipamentos', equipamentoRoutes);
+app.use("/api/equipamentos", equipamentoRoutes);
+app.use("/api/upload", uploadRoutes);
+app.use(errorHandler);
+
+// ✅ Torna a pasta de uploads acessível publicamente
+app.use('/uploads', express.static(path.join(__dirname, 'src', 'uploads')));
 
 // Rota inicial (teste rápido)
 app.get("/", (req, res) => {
