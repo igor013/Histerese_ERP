@@ -17,12 +17,15 @@ const empresaRoutes = require("./src/routes/empresaRoutes");
 const usuarioRoutes = require("./src/routes/usuarioRoutes");
 const produtoRoutes = require("./src/routes/produtoRoutes");
 const notaRoutes = require("./src/routes/notaRoutes");
+const clienteRoutes = require("./src/routes/clienteRoutes");
 
 // Rotas base
 app.use("/api/empresas", empresaRoutes);
 app.use("/api/usuarios", usuarioRoutes);
 app.use("/api/produtos", produtoRoutes);
 app.use("/api/notas", notaRoutes);
+app.use("/api/clientes", clienteRoutes);
+
 
 // Rota inicial (teste rápido)
 app.get("/", (req, res) => {
