@@ -1,20 +1,20 @@
+// src/routes/usuarioRoutes.js
 const express = require("express");
 const router = express.Router();
 const usuarioController = require("../controllers/usuarioController");
+const authMiddleware = require("../middlewares/authMiddleware");
 
-// Cadastrar usuário
+// 🧩 Rotas públicas
+// Cadastrar novo usuário
 router.post("/", usuarioController.criar);
 
-// Listar usuários
-router.get("/", usuarioController.listar);
+// 🛡️ Rotas protegidas (precisam de token JWT)
+router.get("/", authMiddleware, usuarioController.listar);
+router.get("/:id", authMiddleware, usuarioController.buscarPorId);
+router.put("/:id", authMiddleware, usuarioController.atualizar);
+router.delete("/:id", authMiddleware, usuarioController.excluir);
 
-// Buscar por ID
-router.get("/:id", usuarioController.buscarPorId);
-
-// Atualizar
-router.put("/:id", usuarioController.atualizar);
-
-// Excluir lógico
-router.delete("/:id", usuarioController.excluir);
+// 🆙 Alterar status (ex: reativar usuário)
+router.patch("/:id/status", authMiddleware, usuarioController.alterarStatus);
 
 module.exports = router;
