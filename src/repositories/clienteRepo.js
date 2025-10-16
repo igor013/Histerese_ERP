@@ -99,15 +99,51 @@ async function obterClientePorId(id, { incluirExcluido = false } = {}) {
 
 // ————— atualizar (PUT completo) — só em ativo + atualiza timestamp
 async function atualizarCliente(id, dados) {
-  const { nome, empresa, rua, bairro, numero, cidade, complemento, telefone } = dados;
+  const {
+    tipo_pessoa,
+    cpf_cnpj,
+    nome,
+    empresa,
+    rua,
+    bairro,
+    numero,
+    cidade,
+    complemento,
+    telefone
+  } = dados;
+
   const query = `
     UPDATE clientes
-    SET nome=$1, empresa=$2, rua=$3, bairro=$4, numero=$5, cidade=$6, complemento=$7, telefone=$8,
+    SET
+        tipo_pessoa = $1,
+        cpf_cnpj = $2,
+        nome = $3,
+        empresa = $4,
+        rua = $5,
+        bairro = $6,
+        numero = $7,
+        cidade = $8,
+        complemento = $9,
+        telefone = $10,
         atualizado_em = NOW()
-    WHERE id=$9 AND status='ativo'
+    WHERE id = $11 AND status = 'ativo'
     RETURNING *;
   `;
-  const values = [nome, empresa, rua, bairro, numero, cidade, complemento, telefone, id];
+
+  const values = [
+    tipo_pessoa || null,
+    cpf_cnpj || null,
+    nome,
+    empresa || null,
+    rua || null,
+    bairro || null,
+    numero || null,
+    cidade || null,
+    complemento || null,
+    telefone || null,
+    id
+  ];
+
   const { rows } = await pool.query(query, values);
   return rows[0];
 }
@@ -141,7 +177,7 @@ async function patchCliente(id, dados) {
 // ————— exclusão lógica (com timestamp)
 async function excluirCliente(id) {
   const { rows } = await pool.query(
-    `UPDATE clientes SET status='excluido', atualizado_em = NOW() WHERE id=$1 RETURNING *`,
+    `UPDATE clientes SET status='inativo', atualizado_em = NOW() WHERE id=$1 RETURNING *`,
     [id]
   );
   return rows[0];

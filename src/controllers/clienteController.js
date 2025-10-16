@@ -12,8 +12,23 @@ module.exports = {
                 return res.status(400).json({ message: "O campo 'nome' é obrigatório." });
             }
 
-            // Normaliza tipo_pessoa e cpf_cnpj (caso venham)
-            if (body.tipo_pessoa) body.tipo_pessoa = body.tipo_pessoa.toUpperCase();
+            // 🔒 Validação e normalização de tipo_pessoa
+            if (!body?.tipo_pessoa) {
+                return res.status(400).json({ message: "O campo 'tipo_pessoa' é obrigatório ('F' ou 'J')." });
+            } else {
+                const tipo = body.tipo_pessoa.toString().trim().toUpperCase();
+                if (["F", "FISICA", "FÍSICA"].includes(tipo)) {
+                    body.tipo_pessoa = "F";
+                } else if (["J", "JURIDICA", "JURÍDICA"].includes(tipo)) {
+                    body.tipo_pessoa = "J";
+                } else {
+                    return res
+                        .status(400)
+                        .json({ message: "Valor inválido para 'tipo_pessoa'. Use 'F' para Física ou 'J' para Jurídica." });
+                }
+            }
+
+            // Normaliza CPF/CNPJ (mantendo apenas números)
             if (body.cpf_cnpj) body.cpf_cnpj = body.cpf_cnpj.replace(/\D/g, "");
 
             const novo = await repo.criarCliente(body);
@@ -65,7 +80,20 @@ module.exports = {
                 return res.status(400).json({ message: "O campo 'nome' é obrigatório." });
             }
 
-            if (body.tipo_pessoa) body.tipo_pessoa = body.tipo_pessoa.toUpperCase();
+            // 🔒 Validação e normalização de tipo_pessoa
+            if (body?.tipo_pessoa) {
+                const tipo = body.tipo_pessoa.toString().trim().toUpperCase();
+                if (["F", "FISICA", "FÍSICA"].includes(tipo)) {
+                    body.tipo_pessoa = "F";
+                } else if (["J", "JURIDICA", "JURÍDICA"].includes(tipo)) {
+                    body.tipo_pessoa = "J";
+                } else {
+                    return res
+                        .status(400)
+                        .json({ message: "Valor inválido para 'tipo_pessoa'. Use 'F' para Física ou 'J' para Jurídica." });
+                }
+            }
+
             if (body.cpf_cnpj) body.cpf_cnpj = body.cpf_cnpj.replace(/\D/g, "");
 
             const atualizado = await repo.atualizarCliente(id, body);
@@ -85,7 +113,19 @@ module.exports = {
             const { id } = req.params;
             const body = req.body;
 
-            if (body.tipo_pessoa) body.tipo_pessoa = body.tipo_pessoa.toUpperCase();
+            if (body?.tipo_pessoa) {
+                const tipo = body.tipo_pessoa.toString().trim().toUpperCase();
+                if (["F", "FISICA", "FÍSICA"].includes(tipo)) {
+                    body.tipo_pessoa = "F";
+                } else if (["J", "JURIDICA", "JURÍDICA"].includes(tipo)) {
+                    body.tipo_pessoa = "J";
+                } else {
+                    return res
+                        .status(400)
+                        .json({ message: "Valor inválido para 'tipo_pessoa'. Use 'F' para Física ou 'J' para Jurídica." });
+                }
+            }
+
             if (body.cpf_cnpj) body.cpf_cnpj = body.cpf_cnpj.replace(/\D/g, "");
 
             const atualizado = await repo.patchCliente(id, body);

@@ -2,19 +2,19 @@ const express = require("express");
 const router = express.Router();
 const fornecedorController = require("../controllers/fornecedorController");
 
-// Criar
+// 🔹 Criar fornecedor
 router.post("/", fornecedorController.criar);
 
-// Listar
+// 🔹 Listar fornecedores ativos
 router.get("/", fornecedorController.listar);
 
-// Buscar por ID
+// 🔹 Buscar fornecedor por ID
 router.get("/:id", fornecedorController.buscarPorId);
 
-// Atualizar
+// 🔹 Atualizar fornecedor
 router.put("/:id", fornecedorController.atualizar);
 
-// Exclusão lógica
+// 🔹 Exclusão lógica (status='excluido')
 router.delete("/:id", fornecedorController.excluir);
 
 module.exports = router;

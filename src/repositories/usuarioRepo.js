@@ -1,9 +1,24 @@
 // src/repositories/usuarioRepo.js
 const { pool } = require("../config/db");
 
-// Criar usuário
+// Buscar por login (qualquer status)
+async function buscarPorLogin(login) {
+  const loginMaiusculo = login.trim().toUpperCase();
+  const { rows } = await pool.query("SELECT * FROM usuarios WHERE login=$1", [loginMaiusculo]);
+  return rows[0];
+}
+
+// Criar usuário (agora com validação de login existente)
 async function criar({ nome, login, senha_hash }) {
   const loginMaiusculo = login.trim().toUpperCase();
+
+  // Verifica se já existe usuário com o mesmo login
+  const existente = await buscarPorLogin(loginMaiusculo);
+  if (existente && existente.status !== "excluido") {
+    const erro = new Error("Login já cadastrado. Escolha outro nome de usuário.");
+    erro.status = 400;
+    throw erro;
+  }
 
   const query = `
     INSERT INTO usuarios (nome, login, senha, status, criado_em, atualizado_em)
@@ -32,14 +47,6 @@ async function buscarPorId(id) {
     "SELECT id, nome, login, status, criado_em, atualizado_em FROM usuarios WHERE id=$1",
     [id]
   );
-  return rows[0];
-}
-
-// Buscar por login (qualquer status)
-async function buscarPorLogin(login) {
-  const loginMaiusculo = login.trim().toUpperCase();
-
-  const { rows } = await pool.query("SELECT * FROM usuarios WHERE login=$1", [loginMaiusculo]);
   return rows[0];
 }
 
