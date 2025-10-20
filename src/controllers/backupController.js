@@ -1,99 +1,148 @@
 const { exec } = require("child_process");
 const path = require("path");
 const fs = require("fs");
+require("dotenv").config();
 
-// ======================================================
-// 📦 GERAR BACKUP COMPLETO DO BANCO (estrutura + dados)
-// ======================================================
+// ====================================================
+// 🧭 Funções auxiliares
+// ====================================================
+
+// Retorna o caminho absoluto da pasta de backups
+function resolveBackupDir() {
+    const fromEnv = process.env.BACKUP_DIR;
+    if (fromEnv) {
+        const root = path.resolve(__dirname, "..", "..");
+        return path.isAbsolute(fromEnv) ? fromEnv : path.join(root, fromEnv);
+    }
+    return path.resolve(__dirname, "..", "database", "backups");
+}
+
+// Retorna o caminho do executável do pg_dump
+function resolvePgDump() {
+    return process.env.PG_DUMP_PATH && process.env.PG_DUMP_PATH.trim().length > 0
+        ? process.env.PG_DUMP_PATH
+        : "pg_dump";
+}
+
+// ====================================================
+// 📦 GERAR BACKUP MANUAL (estrutura + dados)
+// ====================================================
 async function gerarBackup(req, res) {
     try {
-        // 🔒 Opcional: restringir somente a usuários admin
-        // if (req.user?.perfil !== "admin") {
-        //   return res.status(403).json({ erro: "Acesso negado — apenas administradores podem gerar backups." });
-        // }
+        const {
+            DB_HOST = "localhost",
+            DB_PORT = "5432",
+            DB_NAME,
+            DB_USER,
+            DB_PASSWORD,
+        } = process.env;
 
-        // Diretório onde os backups serão armazenados
-        const backupDir = path.join(__dirname, "..", "database", "backups");
+        if (!DB_NAME || !DB_USER) {
+            const msg = "Variáveis DB_NAME e DB_USER são obrigatórias no .env";
+            if (res) return res.status(500).json({ erro: msg });
+            else throw new Error(msg);
+        }
 
-        // Garante que a pasta exista
+        const backupDir = resolveBackupDir();
         if (!fs.existsSync(backupDir)) {
             fs.mkdirSync(backupDir, { recursive: true });
         }
 
-        // Nome do arquivo: ex. histerese_backup_2025-10-16-02-34-16.sql
-        const dataAtual = new Date().toISOString().replace(/[:T]/g, "-").split(".")[0];
-        const fileName = `histerese_backup_${dataAtual}.sql`;
+        const timestamp = new Date().toISOString().replace(/[:T]/g, "-").split(".")[0];
+        const fileName = `${DB_NAME}_backup_${timestamp}.sql`;
         const filePath = path.join(backupDir, fileName);
 
-        // Comando pg_dump (usando DATABASE_URL do .env)
-        const command = `pg_dump "${process.env.DATABASE_URL}" -F p -f "${filePath}"`;
+        const pgDump = resolvePgDump();
 
-        // Executa o comando
-        exec(command, (error, stdout, stderr) => {
-            if (error) {
-                console.error("❌ Erro ao gerar backup:", stderr);
-                return res.status(500).json({ erro: "Falha ao gerar backup", detalhes: stderr });
-            }
+        const args = [
+            `-h ${DB_HOST}`,
+            `-p ${DB_PORT}`,
+            `-U ${DB_USER}`,
+            `-d ${DB_NAME}`,
+            `-F p`,
+            `-f "${filePath}"`,
+        ].join(" ");
 
-            console.log(`✅ Backup criado: ${filePath}`);
-            res.json({
-                mensagem: "Backup criado com sucesso!",
-                arquivo: fileName,
-                caminho: filePath,
-                usuario: req.user?.login || "desconhecido",
+        const command = `"${pgDump}" ${args}`;
+        const childEnv = { ...process.env, PGPASSWORD: DB_PASSWORD || "" };
+
+        return new Promise((resolve, reject) => {
+            exec(command, { env: childEnv, shell: true }, (error, stdout, stderr) => {
+                if (error) {
+                    console.error("❌ Erro ao gerar backup:", stderr || error.message);
+                    if (res) {
+                        return res.status(500).json({
+                            erro: "Falha ao gerar backup",
+                            detalhes: stderr || error.message,
+                        });
+                    } else return reject(error);
+                }
+
+                console.log(`✅ Backup criado: ${filePath}`);
+                if (res) {
+                    return res.json({
+                        mensagem: "Backup criado com sucesso!",
+                        arquivo: fileName,
+                        caminho_absoluto: filePath,
+                        pasta_configurada: backupDir,
+                    });
+                } else {
+                    resolve(filePath);
+                }
             });
         });
     } catch (err) {
         console.error("Erro interno ao gerar backup:", err);
-        res.status(500).json({ erro: "Erro interno ao criar backup" });
+        if (res) return res.status(500).json({ erro: "Erro interno ao criar backup" });
+        throw err;
     }
 }
 
-// ======================================================
-// 💾 DOWNLOAD DO BACKUP MAIS RECENTE
-// ======================================================
+// ====================================================
+// 📥 DOWNLOAD DO BACKUP MAIS RECENTE (gera antes)
+// ====================================================
 async function downloadBackup(req, res) {
     try {
-        // 🔒 Opcional: restringir somente a usuários admin
-        // if (req.user?.perfil !== "admin") {
-        //   return res.status(403).json({ erro: "Acesso negado — apenas administradores podem baixar backups." });
-        // }
+        // 1️⃣ Gera um novo backup primeiro (sem resposta HTTP, apenas promessa)
+        console.log("🛠️ Gerando novo backup antes do download...");
+        await gerarBackup(); // chamada direta da função acima
 
-        const backupDir = path.join(__dirname, "..", "database", "backups");
-
-        // Verifica se a pasta existe
+        // 2️⃣ Agora busca o arquivo mais recente
+        const backupDir = resolveBackupDir();
         if (!fs.existsSync(backupDir)) {
             return res.status(404).json({ erro: "Nenhum backup encontrado (pasta inexistente)" });
         }
 
-        // Lista e ordena os arquivos .sql por data de modificação
-        const arquivos = fs.readdirSync(backupDir)
-            .filter((file) => file.endsWith(".sql"))
+        const arquivos = fs
+            .readdirSync(backupDir)
+            .filter((f) => f.toLowerCase().endsWith(".sql"))
             .sort((a, b) => {
                 const aTime = fs.statSync(path.join(backupDir, a)).mtime.getTime();
                 const bTime = fs.statSync(path.join(backupDir, b)).mtime.getTime();
-                return bTime - aTime; // mais recente primeiro
+                return bTime - aTime;
             });
 
         if (arquivos.length === 0) {
             return res.status(404).json({ erro: "Nenhum backup .sql encontrado" });
         }
 
-        const ultimoBackup = arquivos[0];
-        const filePath = path.join(backupDir, ultimoBackup);
+        const ultimo = arquivos[0];
+        const filePath = path.join(backupDir, ultimo);
 
-        console.log(`📤 Usuário ${req.user?.login || "desconhecido"} baixou o backup: ${ultimoBackup}`);
+        console.log(`📤 Enviando backup mais recente: ${ultimo}`);
 
-        // Envia o arquivo como download
-        res.download(filePath, ultimoBackup, (err) => {
+        res.download(filePath, ultimo, (err) => {
             if (err) {
                 console.error("Erro ao enviar arquivo:", err);
-                res.status(500).json({ erro: "Falha ao baixar o backup" });
+                return res.status(500).json({ erro: "Falha ao baixar o backup" });
             }
         });
     } catch (err) {
-        console.error("Erro interno ao buscar backups:", err);
-        res.status(500).json({ erro: "Erro interno ao buscar backups" });
+        console.error("Erro ao gerar e baixar backup:", err);
+        return res.status(500).json({
+            erro: "Falha ao gerar e baixar backup",
+            detalhes: err.message,
+        });
     }
 }
 

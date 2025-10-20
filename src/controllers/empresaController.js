@@ -1,118 +1,181 @@
-// controllers/empresaController.js
-// Controlador do módulo Empresa — revisado para validação, paginação/busca e tratamento de erros via next(err)
+// ====================================================
+// 🧩 CONTROLLER: EMPRESA
+// ====================================================
+// Responsável por receber as requisições, validar dados
+// e chamar o repositório (empresaRepo.js)
+// ====================================================
 
 const empresaRepo = require("../repositories/empresaRepo");
 
-/** Utilidades de validação básicas **/
-function badRequest(message) {
-    const e = new Error(message || "Requisição inválida");
-    e.status = 400;
-    return e;
-}
-
-function assertNome(nome) {
-    if (typeof nome !== "string" || !nome.trim()) {
-        throw badRequest("Campo 'nome' é obrigatório.");
-    }
-}
-
-function parsePositiveInt(value, fallback) {
-    const n = Number(value);
-    return Number.isInteger(n) && n > 0 ? n : fallback;
-}
-
-/**
- * POST /empresa
- * Body: { nome: string, logo_url?: string }
- */
-async function criar(req, res, next) {
+// ====================================================
+// 📋 LISTAR TODAS AS EMPRESAS
+// ====================================================
+async function listar(req, res) {
     try {
-        const { nome, logo_url } = req.body || {};
-        assertNome(nome);
-
-        const empresa = await empresaRepo.criar({ nome: nome.trim(), logo_url });
-        return res.status(201).json(empresa);
-    } catch (err) {
-        return next(err);
-    }
-}
-
-/**
- * GET /empresa
- * Query: page?: number, limit?: number, q?: string
- */
-async function listar(req, res, next) {
-    try {
-        const page = parsePositiveInt(req.query.page, 1);
-        const limit = parsePositiveInt(req.query.limit, 20);
-        const q = typeof req.query.q === "string" && req.query.q.trim() ? req.query.q.trim() : undefined;
-
-        const empresas = await empresaRepo.listar({ page, limit, q });
+        const empresas = await empresaRepo.listar();
         return res.json(empresas);
     } catch (err) {
-        return next(err);
+        console.error("Erro ao listar empresas:", err);
+        return res.status(500).json({ erro: "Erro interno ao listar empresas" });
     }
 }
 
-/**
- * GET /empresa/:id
- */
-async function obterPorId(req, res, next) {
+// ====================================================
+// 🔍 BUSCAR EMPRESA POR ID
+// ====================================================
+async function buscarPorId(req, res) {
     try {
         const { id } = req.params;
-        const empresa = await empresaRepo.getById(id);
+        const empresa = await empresaRepo.buscarPorId(id);
+
         if (!empresa) {
             return res.status(404).json({ erro: "Empresa não encontrada" });
         }
+
         return res.json(empresa);
     } catch (err) {
-        return next(err);
+        console.error("Erro ao buscar empresa:", err);
+        return res.status(500).json({ erro: "Erro interno ao buscar empresa" });
     }
 }
 
-/**
- * PUT /empresa/:id
- * Body: { nome?: string, logo_url?: string, status?: 'ativo' | 'inativo' }
- */
-async function atualizar(req, res, next) {
+// ====================================================
+// 🏢 CRIAR NOVA EMPRESA
+// ====================================================
+async function criar(req, res) {
+    try {
+        const {
+            razao_social,
+            nome_fantasia,
+            cnpj,
+            inscricao_estadual,
+            email,
+            telefone,
+            rua,
+            numero,
+            bairro,
+            cidade,
+            uf,
+            cep,
+            tipo,
+            matriz_id,
+            logo_url
+        } = req.body;
+
+        // 🔒 Validação dos campos obrigatórios
+        if (!razao_social || razao_social.trim() === "") {
+            return res.status(400).json({ erro: "O campo 'razao_social' é obrigatório." });
+        }
+
+        // 🔍 Se quiser, pode validar CNPJ ou email aqui também
+        const dados = {
+            razao_social: razao_social.trim(),
+            nome_fantasia: nome_fantasia || null,
+            cnpj: cnpj || null,
+            inscricao_estadual: inscricao_estadual || null,
+            email: email || null,
+            telefone: telefone || null,
+            rua: rua || null,
+            numero: numero || null,
+            bairro: bairro || null,
+            cidade: cidade || null,
+            uf: uf || null,
+            cep: cep || null,
+            tipo: tipo || "Matriz",
+            matriz_id: matriz_id || null,
+            logo_url: logo_url || null
+        };
+
+        const nova = await empresaRepo.criar(dados);
+        return res.status(201).json({
+            mensagem: "Empresa criada com sucesso",
+            empresa: nova
+        });
+    } catch (err) {
+        console.error("Erro ao criar empresa:", err);
+        return res.status(500).json({
+            erro: "Erro interno ao criar empresa",
+            detalhes: err.message
+        });
+    }
+}
+
+// ====================================================
+// ✏️ ATUALIZAR EMPRESA
+// ====================================================
+async function atualizar(req, res) {
     try {
         const { id } = req.params;
-        const data = { ...req.body };
+        const dados = req.body;
 
-        // valida apenas se vier no payload
-        if (data.nome !== undefined) assertNome(data.nome);
-        if (data.nome) data.nome = data.nome.trim();
+        const existente = await empresaRepo.buscarPorId(id);
+        if (!existente) {
+            return res.status(404).json({ erro: "Empresa não encontrada" });
+        }
 
-        const empresa = await empresaRepo.atualizar(id, data);
+        const atualizada = await empresaRepo.atualizar(id, dados);
+        return res.json({
+            mensagem: "Empresa atualizada com sucesso",
+            empresa: atualizada
+        });
+    } catch (err) {
+        console.error("Erro ao atualizar empresa:", err);
+        return res.status(500).json({ erro: "Erro interno ao atualizar empresa" });
+    }
+}
+
+// ====================================================
+// 🗑️ EXCLUSÃO LÓGICA
+// ====================================================
+async function excluir(req, res) {
+    try {
+        const { id } = req.params;
+        const empresa = await empresaRepo.excluir(id);
+
         if (!empresa) {
             return res.status(404).json({ erro: "Empresa não encontrada" });
         }
-        return res.json(empresa);
+
+        return res.json({
+            mensagem: "Empresa excluída com sucesso",
+            empresa
+        });
     } catch (err) {
-        return next(err);
+        console.error("Erro ao excluir empresa:", err);
+        return res.status(500).json({ erro: "Erro interno ao excluir empresa" });
     }
 }
 
-/**
- * DELETE /empresa/:id (soft delete)
- */
-async function remover(req, res, next) {
+// ====================================================
+// 🔁 REATIVAR EMPRESA
+// ====================================================
+async function reativar(req, res) {
     try {
         const { id } = req.params;
-        const empresa = await empresaRepo.softDelete(id);
+        const empresa = await empresaRepo.reativar(id);
+
         if (!empresa) {
             return res.status(404).json({ erro: "Empresa não encontrada" });
         }
-        return res.json({ ok: true });
+
+        return res.json({
+            mensagem: "Empresa reativada com sucesso",
+            empresa
+        });
     } catch (err) {
-        return next(err);
+        console.error("Erro ao reativar empresa:", err);
+        return res.status(500).json({ erro: "Erro interno ao reativar empresa" });
     }
 }
 
+// ====================================================
+// 🧩 EXPORTAÇÃO DO MÓDULO
+// ====================================================
 module.exports = {
-    criar,
     listar,
-    obterPorId,
+    buscarPorId,
+    criar,
     atualizar,
-    remover,
+    excluir,
+    reativar
 };

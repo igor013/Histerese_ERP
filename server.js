@@ -1,106 +1,104 @@
-// ======================================================
-// 🧠 Histerese ERP — Servidor principal (Backend Fase 2)
-// ======================================================
-// Suporte completo a autenticação JWT, upload de arquivos,
-// manipulação de dados multiempresa e backup do banco de dados.
-// ======================================================
+// ====================================================
+// 🧠 Histerese ERP - Servidor Principal
+// ====================================================
+// Estrutura:
+//   📦 server.js (raiz)
+//   📁 src/config
+//   📁 src/controllers
+//   📁 src/repositories
+//   📁 src/routes
+//   📁 src/middlewares
+// ====================================================
 
+require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
-const dotenv = require("dotenv");
 const path = require("path");
-const { pool } = require("./src/config/db");
-
-// Carrega variáveis de ambiente (.env)
-dotenv.config();
 
 const app = express();
 
-// ======================================================
-// 🔧 Middlewares globais
-// ======================================================
+// ====================================================
+// ⚙️ MIDDLEWARES GLOBAIS
+// ====================================================
 app.use(cors());
 app.use(express.json());
 
-// ✅ Torna a pasta de uploads acessível publicamente
-app.use("/uploads", express.static(path.join(__dirname, "src", "uploads")));
-
-// ======================================================
-// 📦 Importação de rotas
-// ======================================================
-const empresaRoutes = require("./src/routes/empresaRoutes");
-const usuarioRoutes = require("./src/routes/usuarioRoutes");
-const produtoRoutes = require("./src/routes/produtoRoutes");
-const notaRoutes = require("./src/routes/notaRoutes");
-const clienteRoutes = require("./src/routes/clienteRoutes");
-const equipamentoRoutes = require("./src/routes/equipamentoRoutes");
-const fornecedorRoutes = require("./src/routes/fornecedorRoutes");
-const servicoRoutes = require("./src/routes/servicoRoutes");
-const uploadRoutes = require("./src/routes/uploadRoutes");
+// ====================================================
+// 🔓 ROTAS PÚBLICAS (sem autenticação JWT)
+// ====================================================
+// Exemplo: login e registro
 const authRoutes = require("./src/routes/authRoutes");
-const backupRoutes = require("./src/routes/backupRoutes"); // 🧩 Novo módulo de backup
+app.use("/api/auth", authRoutes);
 
-// ======================================================
-// 🚀 Rotas públicas (sem autenticação)
-// ======================================================
-app.use("/api/auth", authRoutes);      // Login e registro
-app.use("/api/upload", uploadRoutes);  // Upload de imagens/logos
+// ====================================================
+// 🔗 ROTAS PROTEGIDAS (JWT aplicado dentro dos arquivos)
+// ====================================================
 
-// 🔹 Teste de conexão com o banco
-app.get("/api/test-db", async (req, res) => {
-    try {
-        const result = await pool.query("SELECT NOW()");
-        res.json({ conectado: true, hora_servidor: result.rows[0].now });
-    } catch (err) {
-        res.status(500).json({
-            erro: "Falha ao conectar com o banco",
-            detalhes: err.message,
-        });
-    }
-});
-
-// ======================================================
-// 🔐 Middleware global de autenticação (após rotas públicas)
-// ======================================================
-const authMiddleware = require("./src/middlewares/authMiddleware");
-app.use(authMiddleware);
-
-// ======================================================
-// 🔒 Rotas protegidas (JWT obrigatório)
-// ======================================================
+// Empresa
+const empresaRoutes = require("./src/routes/empresaRoutes");
 app.use("/api/empresas", empresaRoutes);
-app.use("/api/usuarios", usuarioRoutes);
-app.use("/api/produtos", produtoRoutes);
-app.use("/api/notas", notaRoutes);
-app.use("/api/clientes", clienteRoutes);
-app.use("/api/equipamentos", equipamentoRoutes);
-app.use("/api/fornecedores", fornecedorRoutes);
-app.use("/api/servicos", servicoRoutes);
 
-// ======================================================
-// 💾 Rotas de backup
-// ======================================================
-// /api/backup       → Gera novo backup (sem autenticação)
-// /api/backup/download → Download protegido com JWT
+// Usuários
+const usuarioRoutes = require("./src/routes/usuarioRoutes");
+app.use("/api/usuarios", usuarioRoutes);
+
+// Clientes
+const clienteRoutes = require("./src/routes/clienteRoutes");
+app.use("/api/clientes", clienteRoutes);
+
+// Produtos
+const produtoRoutes = require("./src/routes/produtoRoutes");
+app.use("/api/produtos", produtoRoutes);
+
+// Notas fiscais
+const notaRoutes = require("./src/routes/notaRoutes");
+app.use("/api/notas", notaRoutes);
+
+// Equipamentos
+const equipamentoRoutes = require("./src/routes/equipamentoRoutes");
+app.use("/api/equipamentos", equipamentoRoutes);
+
+// Grupos
+const grupoRoutes = require("./src/routes/grupoRoutes");
+app.use("/api/grupos", grupoRoutes);
+
+// Uploads (logos, arquivos etc.)
+const uploadRoutes = require("./src/routes/uploadRoutes");
+app.use("/api/upload", uploadRoutes);
+
+// Backups (com JWT)
+const backupRoutes = require("./src/routes/backupRoutes");
 app.use("/api/backup", backupRoutes);
 
-// ======================================================
-// ⚠️ Middleware global de erros (sempre no fim)
-// ======================================================
+// ====================================================
+// ⚙️ MIDDLEWARE GLOBAL DE ERROS
+// ====================================================
 const errorHandler = require("./src/middlewares/errorHandler");
 app.use(errorHandler);
 
-// ======================================================
-// 🏠 Rota inicial
-// ======================================================
-app.get("/", (req, res) => {
-    res.send("✅ API Histerese ERP está rodando com autenticação global JWT...");
+// ====================================================
+// 🌐 SERVIR ARQUIVOS ESTÁTICOS (ex: logos)
+// ====================================================
+app.use("/uploads", express.static(path.join(__dirname, "src", "uploads")));
+
+// ====================================================
+// 🚫 ROTA PADRÃO PARA 404
+// ====================================================
+app.use((req, res) => {
+    res.status(404).json({
+        erro: "Rota não encontrada",
+        caminho: req.originalUrl,
+        metodo: req.method,
+    });
 });
 
-// ======================================================
-// 🖥️ Inicialização do servidor
-// ======================================================
+// ====================================================
+// 🚀 INICIALIZAÇÃO DO SERVIDOR
+// ====================================================
 const PORT = process.env.PORT || 4000;
-app.listen(PORT, () =>
-    console.log(`🚀 Servidor Histerese ERP rodando na porta ${PORT}`)
-);
+app.listen(PORT, () => {
+    console.log("===============================================");
+    console.log(`✅ Servidor rodando na porta ${PORT}`);
+    console.log(`🌍 Acesse: http://localhost:${PORT}`);
+    console.log("===============================================");
+});

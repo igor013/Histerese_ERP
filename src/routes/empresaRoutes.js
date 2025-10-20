@@ -1,23 +1,58 @@
-// routes/empresaRoutes.js
-// Rotas do módulo Empresa — compatíveis com o controller revisado
+// ====================================================
+// 🧭 ROTAS: EMPRESA
+// ====================================================
+// Define os endpoints relacionados à tabela "empresa"
+// ====================================================
 
 const express = require("express");
 const router = express.Router();
 const empresaController = require("../controllers/empresaController");
+const authMiddleware = require("../middlewares/authMiddleware");
 
-// Criar nova empresa
-router.post("/", empresaController.criar);
+// ====================================================
+// 🔒 Middleware global de autenticação
+// ====================================================
+// Caso queira liberar para teste, comente esta linha temporariamente.
+router.use(authMiddleware);
 
-// Listar empresas com paginação e busca (GET /empresa?page=1&limit=20&q=texto)
+// ====================================================
+// 📋 LISTAR TODAS AS EMPRESAS
+// GET /api/empresas
+// ====================================================
 router.get("/", empresaController.listar);
 
-// Obter empresa específica por ID
-router.get("/:id", empresaController.obterPorId);
+// ====================================================
+// 🔍 BUSCAR EMPRESA POR ID
+// GET /api/empresas/:id
+// ====================================================
+router.get("/:id", empresaController.buscarPorId);
 
-// Atualizar dados da empresa
+// ====================================================
+// 🏢 CRIAR NOVA EMPRESA
+// POST /api/empresas
+// ====================================================
+router.post("/", empresaController.criar);
+
+// ====================================================
+// ✏️ ATUALIZAR EMPRESA
+// PUT /api/empresas/:id
+// ====================================================
 router.put("/:id", empresaController.atualizar);
 
-// Exclusão lógica (soft delete)
-router.delete("/:id", empresaController.remover);
+// ====================================================
+// 🗑️ EXCLUIR EMPRESA (exclusão lógica)
+// DELETE /api/empresas/:id
+// ====================================================
+router.delete("/:id", empresaController.excluir);
 
+// ====================================================
+// 🔁 REATIVAR EMPRESA
+// PATCH /api/empresas/:id/status
+// Body: { "status": "ativo" }
+// ====================================================
+router.patch("/:id/status", empresaController.reativar);
+
+// ====================================================
+// 📦 EXPORTAÇÃO DO MÓDULO
+// ====================================================
 module.exports = router;
