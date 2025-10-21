@@ -1,5 +1,5 @@
 // src/repositories/equipamentoRepo.js
-const { pool } = require('../config/db'); // ✅ usa o pool exportado
+const pool  = require('../config/db'); // ✅ usa o pool exportado
 
 // Helpers de paginação
 const toInt = (v, d) => (Number.isInteger(+v) && +v > 0 ? +v : d);

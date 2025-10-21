@@ -62,6 +62,10 @@ app.use("/api/equipamentos", equipamentoRoutes);
 const grupoRoutes = require("./src/routes/grupoRoutes");
 app.use("/api/grupos", grupoRoutes);
 
+// Fornecedores
+const fornecedorRoutes = require("./src/routes/fornecedorRoutes");
+app.use("/api/fornecedores", fornecedorRoutes);
+
 // Uploads (logos, arquivos etc.)
 const uploadRoutes = require("./src/routes/uploadRoutes");
 app.use("/api/upload", uploadRoutes);
@@ -69,6 +73,12 @@ app.use("/api/upload", uploadRoutes);
 // Backups (com JWT)
 const backupRoutes = require("./src/routes/backupRoutes");
 app.use("/api/backup", backupRoutes);
+ 
+// Serviços
+const servicoRoutes = require("./src/routes/servicoRoutes");
+app.use("/api/servicos", servicoRoutes);
+
+
 
 // ====================================================
 // ⚙️ MIDDLEWARE GLOBAL DE ERROS

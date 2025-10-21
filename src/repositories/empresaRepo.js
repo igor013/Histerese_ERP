@@ -9,7 +9,7 @@
 //   tipo, matriz_id, logo_url, status, criado_em, atualizado_em
 // ====================================================
 
-const { pool } = require("../config/db");
+const  pool  = require("../config/db");
 
 // ====================================================
 // 🧾 LISTAR TODAS AS EMPRESAS (exceto excluídas)

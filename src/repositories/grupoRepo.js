@@ -1,4 +1,4 @@
-const { pool } = require("../config/db");
+const  pool  = require("../config/db");
 
 async function criar({ nome }) {
     const { rows } = await pool.query(

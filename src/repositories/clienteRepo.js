@@ -1,5 +1,5 @@
 // src/repositories/clienteRepo.js
-const { pool } = require("../config/db");
+const  pool  = require("../config/db");
 
 // ————— helpers
 function buildWhere({ q, status }) {

@@ -1,5 +1,5 @@
 // src/repositories/usuarioRepo.js
-const { pool } = require("../config/db");
+const  pool  = require("../config/db");
 
 // Buscar por login (qualquer status)
 async function buscarPorLogin(login) {

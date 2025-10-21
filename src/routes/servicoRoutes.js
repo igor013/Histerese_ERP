@@ -1,26 +1,53 @@
-const express = require('express');
+// ====================================================
+// 🧰 ROTAS: SERVIÇOS / ORDEM DE SERVIÇO (OS)
+// ====================================================
+// Define os endpoints relacionados à tabela "servicos"
+// Todas as rotas exigem autenticação JWT
+// ====================================================
+
+const express = require("express");
 const router = express.Router();
-const ServicoController = require('../controllers/servicoController');
+const ServicoController = require("../controllers/servicoController");
+const authMiddleware = require("../middlewares/authMiddleware");
 
-// 🧾 Criar nova OS
-router.post('/', ServicoController.criar);
+// ====================================================
+// 🔒 Middleware global de autenticação
+// ====================================================
+router.use(authMiddleware);
 
-// 📋 Listar OS com paginação e busca
-router.get('/', ServicoController.listar);
+// ====================================================
+// 🧩 ROTAS
+// ====================================================
 
-// 🔍 Buscar OS por ID
-router.get('/:id', ServicoController.buscarPorId);
+// Criar nova OS
+// POST /api/servicos
+router.post("/", ServicoController.criar);
 
-// ✏️ Atualizar OS
-router.put('/:id', ServicoController.atualizar);
+// Listar OS com paginação e busca
+// GET /api/servicos
+router.get("/", ServicoController.listar);
 
-// 🗑️ Excluir (lógica)
-router.delete('/:id', ServicoController.excluir);
+// Buscar OS por ID
+// GET /api/servicos/:id
+router.get("/:id", ServicoController.buscarPorId);
 
-// 🎯 Buscar OS por status
-router.get('/filtro/status', ServicoController.buscarPorStatus);
+// Atualizar OS
+// PUT /api/servicos/:id
+router.put("/:id", ServicoController.atualizar);
 
-// 👤 Buscar OS por cliente
-router.get('/filtro/cliente', ServicoController.buscarPorCliente);
+// Excluir (exclusão lógica)
+// DELETE /api/servicos/:id
+router.delete("/:id", ServicoController.excluir);
 
+// Buscar OS por status
+// GET /api/servicos/filtro/status
+router.get("/filtro/status", ServicoController.buscarPorStatus);
+
+// Buscar OS por cliente
+// GET /api/servicos/filtro/cliente
+router.get("/filtro/cliente", ServicoController.buscarPorCliente);
+
+// ====================================================
+// 📘 EXPORTAÇÃO DO MÓDULO
+// ====================================================
 module.exports = router;

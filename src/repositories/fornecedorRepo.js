@@ -1,4 +1,4 @@
-const { pool } = require("../config/db");
+const pool  = require("../config/db");
 
 // Criar fornecedor
 async function criar({ empresa_id, nome, bairro, rua, numero, cidade, estado, email, telefone, site }) {

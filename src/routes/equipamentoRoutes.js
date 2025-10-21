@@ -1,25 +1,49 @@
-// src/routes/equipamentoRoutes.js
-const express = require('express');
-const ctrl = require('../controllers/equipamentoController');
+// ====================================================
+// ⚙️ ROTAS: EQUIPAMENTOS
+// ====================================================
+// Define os endpoints relacionados à tabela "equipamentos"
+// Todas as rotas exigem autenticação JWT
+// ====================================================
 
+const express = require("express");
 const router = express.Router();
+const ctrl = require("../controllers/equipamentoController");
+const authMiddleware = require("../middlewares/authMiddleware");
 
-// POST   /equipamentos
-router.post('/', ctrl.create);
+// ====================================================
+// 🔒 Middleware global de autenticação
+// ====================================================
+router.use(authMiddleware);
 
-// GET    /equipamentos?q=&page=&limit=&cliente_id=&tipo=&marca=&modelo=&status=
-router.get('/', ctrl.list);
+// ====================================================
+// 🧩 ROTAS
+// ====================================================
 
-// GET    /equipamentos/:id
-router.get('/:id', ctrl.getById);
+// Criar novo equipamento
+// POST /api/equipamentos
+router.post("/", ctrl.create);
 
-// PUT    /equipamentos/:id
-router.put('/:id', ctrl.update);
+// Listar equipamentos (com filtros e paginação)
+// GET /api/equipamentos?q=&page=&limit=&cliente_id=&tipo=&marca=&modelo=&status=
+router.get("/", ctrl.list);
 
-// DELETE /equipamentos/:id  (soft delete)
-router.delete('/:id', ctrl.remove);
+// Buscar equipamento por ID
+// GET /api/equipamentos/:id
+router.get("/:id", ctrl.getById);
 
-// PATCH  /equipamentos/:id/restaurar
-router.patch('/:id/restaurar', ctrl.restore);
+// Atualizar equipamento
+// PUT /api/equipamentos/:id
+router.put("/:id", ctrl.update);
 
+// Exclusão lógica (soft delete)
+// DELETE /api/equipamentos/:id
+router.delete("/:id", ctrl.remove);
+
+// Restaurar equipamento
+// PATCH /api/equipamentos/:id/restaurar
+router.patch("/:id/restaurar", ctrl.restore);
+
+// ====================================================
+// 📘 EXPORTAÇÃO DO MÓDULO
+// ====================================================
 module.exports = router;

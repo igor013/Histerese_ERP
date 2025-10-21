@@ -1,4 +1,4 @@
-const { pool } = require("../config/db");
+const  pool  = require("../config/db");
 
 async function criar({ nome, valor_compra, valor_venda, quantidade, unidade_medida, fornecedor_id, grupo_id, numero_nota }) {
     const query = `

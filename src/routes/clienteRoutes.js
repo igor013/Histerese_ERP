@@ -1,7 +1,19 @@
-// src/routes/clienteRoutes.js
+// ====================================================
+// 🧾 ROTAS: CLIENTES
+// ====================================================
+// Define os endpoints relacionados à tabela "clientes"
+// Todas as rotas exigem autenticação JWT
+// ====================================================
+
 const express = require("express");
 const router = express.Router();
 const ctrl = require("../controllers/clienteController");
+const authMiddleware = require("../middlewares/authMiddleware");
+
+// ====================================================
+// 🔒 Middleware global de autenticação
+// ====================================================
+router.use(authMiddleware);
 
 // 🔹 Listar clientes (com paginação e busca)
 // GET /api/clientes?q=nome&page=1&limit=20&status=ativo|excluido
@@ -31,4 +43,7 @@ router.delete("/:id", ctrl.excluir);
 // POST /api/clientes/:id/restaurar
 router.post("/:id/restaurar", ctrl.restaurar);
 
+// ====================================================
+// 📘 EXPORTAÇÃO DO MÓDULO
+// ====================================================
 module.exports = router;
