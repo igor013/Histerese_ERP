@@ -1,19 +1,14 @@
 // ====================================================
-// 🧠 Histerese ERP - Servidor Principal
-// ====================================================
-// Estrutura:
-//   📦 server.js (raiz)
-//   📁 src/config
-//   📁 src/controllers
-//   📁 src/repositories
-//   📁 src/routes
-//   📁 src/middlewares
+// 🧠 Histerese ERP - Servidor Principal (Versão Final)
 // ====================================================
 
 require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
 const path = require("path");
+const db = require("./src/config/db");
+const errorHandler = require("./src/middlewares/errorHandler");
+const verificarToken = require("./src/middlewares/authMiddleware");
 
 const app = express();
 
@@ -24,75 +19,50 @@ app.use(cors());
 app.use(express.json());
 
 // ====================================================
-// 🔓 ROTAS PÚBLICAS (sem autenticação JWT)
-// ====================================================
-// Exemplo: login e registro
-const authRoutes = require("./src/routes/authRoutes");
-app.use("/api/auth", authRoutes);
-
-// ====================================================
-// 🔗 ROTAS PROTEGIDAS (JWT aplicado dentro dos arquivos)
-// ====================================================
-
-// Empresa
-const empresaRoutes = require("./src/routes/empresaRoutes");
-app.use("/api/empresas", empresaRoutes);
-
-// Usuários
-const usuarioRoutes = require("./src/routes/usuarioRoutes");
-app.use("/api/usuarios", usuarioRoutes);
-
-// Clientes
-const clienteRoutes = require("./src/routes/clienteRoutes");
-app.use("/api/clientes", clienteRoutes);
-
-// Produtos
-const produtoRoutes = require("./src/routes/produtoRoutes");
-app.use("/api/produtos", produtoRoutes);
-
-// Notas fiscais
-const notaRoutes = require("./src/routes/notaRoutes");
-app.use("/api/notas", notaRoutes);
-
-// Equipamentos
-const equipamentoRoutes = require("./src/routes/equipamentoRoutes");
-app.use("/api/equipamentos", equipamentoRoutes);
-
-// Grupos
-const grupoRoutes = require("./src/routes/grupoRoutes");
-app.use("/api/grupos", grupoRoutes);
-
-// Fornecedores
-const fornecedorRoutes = require("./src/routes/fornecedorRoutes");
-app.use("/api/fornecedores", fornecedorRoutes);
-
-// Uploads (logos, arquivos etc.)
-const uploadRoutes = require("./src/routes/uploadRoutes");
-app.use("/api/upload", uploadRoutes);
-
-// Backups (com JWT)
-const backupRoutes = require("./src/routes/backupRoutes");
-app.use("/api/backup", backupRoutes);
- 
-// Serviços
-const servicoRoutes = require("./src/routes/servicoRoutes");
-app.use("/api/servicos", servicoRoutes);
-
-
-
-// ====================================================
-// ⚙️ MIDDLEWARE GLOBAL DE ERROS
-// ====================================================
-const errorHandler = require("./src/middlewares/errorHandler");
-app.use(errorHandler);
-
-// ====================================================
-// 🌐 SERVIR ARQUIVOS ESTÁTICOS (ex: logos)
+// 🌐 SERVIR ARQUIVOS ESTÁTICOS
 // ====================================================
 app.use("/uploads", express.static(path.join(__dirname, "src", "uploads")));
 
 // ====================================================
-// 🚫 ROTA PADRÃO PARA 404
+// 🔓 ROTAS PÚBLICAS
+// ====================================================
+app.get("/", (req, res) => {
+    res.json({
+        status: "✅ Servidor ativo",
+        versao: "2.0",
+        autor: "Igor Henrique",
+    });
+});
+
+// Rota pública de autenticação
+app.use("/api/auth", require("./src/routes/authRoutes"));
+
+// ====================================================
+// 🔐 ROTAS PROTEGIDAS (JWT)
+// ====================================================
+app.use(verificarToken);
+
+// 🔹 Módulos principais
+app.use("/api/empresas", require("./src/routes/empresaRoutes"));
+app.use("/api/usuarios", require("./src/routes/usuarioRoutes"));
+app.use("/api/clientes", require("./src/routes/clienteRoutes"));
+app.use("/api/produtos", require("./src/routes/produtoRoutes"));
+app.use("/api/notas", require("./src/routes/notaRoutes"));
+app.use("/api/equipamentos", require("./src/routes/equipamentoRoutes"));
+app.use("/api/grupos", require("./src/routes/grupoRoutes"));
+app.use("/api/fornecedores", require("./src/routes/fornecedorRoutes"));
+app.use("/api/upload", require("./src/routes/uploadRoutes"));
+app.use("/api/backup", require("./src/routes/backupRoutes"));
+app.use("/api/servicos", require("./src/routes/servicoRoutes"));
+app.use("/api/logs", require("./src/routes/logRoutes")); // 🧾 Módulo de Logs
+
+// ====================================================
+// ⚙️ MIDDLEWARE GLOBAL DE ERROS
+// ====================================================
+app.use(errorHandler);
+
+// ====================================================
+// 🚫 ROTA PADRÃO 404
 // ====================================================
 app.use((req, res) => {
     res.status(404).json({
@@ -106,9 +76,17 @@ app.use((req, res) => {
 // 🚀 INICIALIZAÇÃO DO SERVIDOR
 // ====================================================
 const PORT = process.env.PORT || 4000;
-app.listen(PORT, () => {
-    console.log("===============================================");
-    console.log(`✅ Servidor rodando na porta ${PORT}`);
-    console.log(`🌍 Acesse: http://localhost:${PORT}`);
-    console.log("===============================================");
+
+app.listen(PORT, async () => {
+    try {
+        await db.connect();
+        console.log("===============================================");
+        console.log(`✅ Servidor rodando na porta ${PORT}`);
+        console.log(`🌍 Acesse: http://localhost:${PORT}`);
+        console.log("===============================================");
+        console.log("✅ Conectado ao PostgreSQL com sucesso");
+    } catch (error) {
+        console.error("❌ Erro ao conectar ao banco de dados:", error.message);
+        process.exit(1);
+    }
 });

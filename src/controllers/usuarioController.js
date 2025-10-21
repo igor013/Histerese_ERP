@@ -1,7 +1,12 @@
-// src/controllers/usuarioController.js
+// ====================================================
+// 👤 Histerese ERP - Controller: Usuários (com logs)
+// ====================================================
+
 const usuarioRepo = require("../repositories/usuarioRepo");
 const bcrypt = require("bcryptjs");
+const { registrarLog } = require("../repositories/logRepo");
 
+// ➕ Criar usuário
 async function criar(req, res) {
     try {
         const { nome, login, senha } = req.body;
@@ -10,10 +15,8 @@ async function criar(req, res) {
             return res.status(400).json({ erro: "Campos obrigatórios: nome, login, senha" });
         }
 
-        // força o login para maiúsculas
         const loginNormalizado = login.trim().toUpperCase();
 
-        // verifica se já existe login igual
         const existente = await usuarioRepo.buscarPorLogin(loginNormalizado);
         if (existente) {
             return res.status(400).json({ erro: "Login já cadastrado" });
@@ -21,6 +24,21 @@ async function criar(req, res) {
 
         const senha_hash = await bcrypt.hash(senha, 10);
         const usuario = await usuarioRepo.criar({ nome, login: loginNormalizado, senha_hash });
+
+        // 🧾 LOG DE CRIAÇÃO
+        try {
+            await registrarLog({
+                usuario_id: req.user?.id,
+                empresa_id: req.user?.empresa_id,
+                acao: "CRIAR",
+                tabela: "usuarios",
+                registro_id: usuario.id,
+                descricao: `Usuário '${nome}' criado com sucesso.`,
+                ip: req.ip,
+            });
+        } catch (logErr) {
+            console.error("⚠️ Falha ao registrar log de criação de usuário:", logErr.message);
+        }
 
         return res.status(201).json(usuario);
     } catch (err) {
@@ -33,6 +51,7 @@ async function criar(req, res) {
     }
 }
 
+// 📋 Listar usuários
 async function listar(req, res) {
     try {
         const usuarios = await usuarioRepo.listar();
@@ -42,6 +61,7 @@ async function listar(req, res) {
     }
 }
 
+// 🔍 Buscar usuário por ID
 async function buscarPorId(req, res) {
     try {
         const usuario = await usuarioRepo.buscarPorId(req.params.id);
@@ -52,6 +72,7 @@ async function buscarPorId(req, res) {
     }
 }
 
+// ✏️ Atualizar usuário
 async function atualizar(req, res) {
     try {
         const { nome, login, senha } = req.body;
@@ -65,6 +86,22 @@ async function atualizar(req, res) {
         });
 
         if (!usuario) return res.status(404).json({ erro: "Usuário não encontrado" });
+
+        // 🧾 LOG DE ATUALIZAÇÃO
+        try {
+            await registrarLog({
+                usuario_id: req.user?.id,
+                empresa_id: req.user?.empresa_id,
+                acao: "EDITAR",
+                tabela: "usuarios",
+                registro_id: req.params.id,
+                descricao: `Usuário '${usuario.nome}' atualizado.`,
+                ip: req.ip,
+            });
+        } catch (logErr) {
+            console.error("⚠️ Falha ao registrar log de atualização de usuário:", logErr.message);
+        }
+
         return res.json(usuario);
     } catch (err) {
         if (err.code === "23505") {
@@ -74,20 +111,34 @@ async function atualizar(req, res) {
     }
 }
 
+// 🗑️ Exclusão lógica de usuário
 async function excluir(req, res) {
     try {
         const usuario = await usuarioRepo.excluir(req.params.id);
         if (!usuario) return res.status(404).json({ erro: "Usuário não encontrado" });
+
+        // 🧾 LOG DE EXCLUSÃO
+        try {
+            await registrarLog({
+                usuario_id: req.user?.id,
+                empresa_id: req.user?.empresa_id,
+                acao: "EXCLUIR",
+                tabela: "usuarios",
+                registro_id: req.params.id,
+                descricao: `Usuário '${usuario.nome}' marcado como excluído.`,
+                ip: req.ip,
+            });
+        } catch (logErr) {
+            console.error("⚠️ Falha ao registrar log de exclusão de usuário:", logErr.message);
+        }
+
         return res.json({ mensagem: "Usuário excluído com sucesso" });
     } catch (err) {
         return res.status(500).json({ erro: err.message });
     }
 }
 
-/**
- * PATCH /usuarios/:id/status
- * Body: { "status": "ativo" | "excluido" }
- */
+// 🔁 Alterar status do usuário
 async function alterarStatus(req, res) {
     try {
         const { id } = req.params;
@@ -104,6 +155,22 @@ async function alterarStatus(req, res) {
         }
 
         const atualizado = await usuarioRepo.atualizarStatus(id, status);
+
+        // 🧾 LOG DE ALTERAÇÃO DE STATUS
+        try {
+            await registrarLog({
+                usuario_id: req.user?.id,
+                empresa_id: req.user?.empresa_id,
+                acao: "ALTERAR_STATUS",
+                tabela: "usuarios",
+                registro_id: id,
+                descricao: `Status do usuário '${usuarioExistente.nome}' alterado para '${status}'.`,
+                ip: req.ip,
+            });
+        } catch (logErr) {
+            console.error("⚠️ Falha ao registrar log de alteração de status:", logErr.message);
+        }
+
         return res.json({
             mensagem: `Status alterado para '${status}' com sucesso`,
             usuario: atualizado

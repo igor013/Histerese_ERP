@@ -1,25 +1,38 @@
 // ====================================================
-// 🧰 Histerese ERP - Controller: Serviços / OS
-// ====================================================
-// Controla as operações de CRUD e filtros das ordens
-// de serviço, vinculadas à empresa do usuário logado.
+// 🧰 Histerese ERP - Controller: Serviços / OS (com logs)
 // ====================================================
 
 const ServicoRepository = require("../repositories/servicoRepository");
+const { registrarLog } = require("../repositories/logRepo");
 
 const ServicoController = {
-    // ====================================================
     // 🆕 Criar novo serviço / OS
-    // ====================================================
     async criar(req, res) {
         try {
             const empresa_id = req.user?.empresa_id;
+            const usuario_id = req.user?.id;
             if (!empresa_id) {
                 return res.status(400).json({ erro: "empresa_id é obrigatório" });
             }
 
             const dados = { ...req.body, empresa_id };
             const novoServico = await ServicoRepository.criarServico(dados);
+
+            // 🧾 LOG DE CRIAÇÃO
+            try {
+                await registrarLog({
+                    usuario_id,
+                    empresa_id,
+                    acao: "CRIAR",
+                    tabela: "servicos",
+                    registro_id: novoServico.id,
+                    descricao: `Serviço/OS '${novoServico.descricao}' criado com sucesso.`,
+                    ip: req.ip,
+                });
+            } catch (logErr) {
+                console.error("⚠️ Falha ao registrar log de criação de serviço:", logErr.message);
+            }
+
             res.status(201).json(novoServico);
         } catch (error) {
             console.error("Erro ao criar serviço:", error);
@@ -27,17 +40,12 @@ const ServicoController = {
         }
     },
 
-    // ====================================================
-    // 📋 Listar serviços (com paginação e busca)
-    // ====================================================
+    // 📋 Listar serviços
     async listar(req, res) {
         try {
             const empresa_id = req.user?.empresa_id;
             const { pagina, limite, busca } = req.query;
-
-            if (!empresa_id) {
-                return res.status(400).json({ erro: "empresa_id é obrigatório" });
-            }
+            if (!empresa_id) return res.status(400).json({ erro: "empresa_id é obrigatório" });
 
             const resultado = await ServicoRepository.listarServicos({
                 empresa_id,
@@ -53,18 +61,12 @@ const ServicoController = {
         }
     },
 
-    // ====================================================
     // 🔍 Buscar serviço por ID
-    // ====================================================
     async buscarPorId(req, res) {
         try {
             const { id } = req.params;
             const servico = await ServicoRepository.buscarServicoPorId(id);
-
-            if (!servico) {
-                return res.status(404).json({ erro: "Serviço não encontrado" });
-            }
-
+            if (!servico) return res.status(404).json({ erro: "Serviço não encontrado" });
             res.json(servico);
         } catch (error) {
             console.error("Erro ao buscar serviço:", error);
@@ -72,18 +74,29 @@ const ServicoController = {
         }
     },
 
-    // ====================================================
     // ✏️ Atualizar serviço
-    // ====================================================
     async atualizar(req, res) {
         try {
             const { id } = req.params;
-            const dados = req.body;
+            const usuario_id = req.user?.id;
+            const empresa_id = req.user?.empresa_id;
 
-            const servicoAtualizado = await ServicoRepository.atualizarServico(id, dados);
+            const servicoAtualizado = await ServicoRepository.atualizarServico(id, req.body);
+            if (!servicoAtualizado) return res.status(404).json({ erro: "Serviço não encontrado" });
 
-            if (!servicoAtualizado) {
-                return res.status(404).json({ erro: "Serviço não encontrado" });
+            // 🧾 LOG DE ATUALIZAÇÃO
+            try {
+                await registrarLog({
+                    usuario_id,
+                    empresa_id,
+                    acao: "EDITAR",
+                    tabela: "servicos",
+                    registro_id: id,
+                    descricao: `Serviço/OS ${id} atualizado.`,
+                    ip: req.ip,
+                });
+            } catch (logErr) {
+                console.error("⚠️ Falha ao registrar log de atualização de serviço:", logErr.message);
             }
 
             res.json(servicoAtualizado);
@@ -93,17 +106,29 @@ const ServicoController = {
         }
     },
 
-    // ====================================================
     // 🗑️ Excluir serviço (exclusão lógica)
-    // ====================================================
     async excluir(req, res) {
         try {
             const { id } = req.params;
+            const usuario_id = req.user?.id;
+            const empresa_id = req.user?.empresa_id;
 
             const servicoExcluido = await ServicoRepository.excluirServico(id);
+            if (!servicoExcluido) return res.status(404).json({ erro: "Serviço não encontrado" });
 
-            if (!servicoExcluido) {
-                return res.status(404).json({ erro: "Serviço não encontrado" });
+            // 🧾 LOG DE EXCLUSÃO
+            try {
+                await registrarLog({
+                    usuario_id,
+                    empresa_id,
+                    acao: "EXCLUIR",
+                    tabela: "servicos",
+                    registro_id: id,
+                    descricao: `Serviço/OS ${id} excluído (inativado).`,
+                    ip: req.ip,
+                });
+            } catch (logErr) {
+                console.error("⚠️ Falha ao registrar log de exclusão de serviço:", logErr.message);
             }
 
             res.json({ mensagem: "Serviço excluído com sucesso" });
@@ -113,17 +138,13 @@ const ServicoController = {
         }
     },
 
-    // ====================================================
     // 🔎 Buscar serviços por status
-    // ====================================================
     async buscarPorStatus(req, res) {
         try {
             const empresa_id = req.user?.empresa_id;
             const { status } = req.query;
-
-            if (!empresa_id || !status) {
+            if (!empresa_id || !status)
                 return res.status(400).json({ erro: "empresa_id e status são obrigatórios" });
-            }
 
             const servicos = await ServicoRepository.buscarPorStatus(empresa_id, status);
             res.json(servicos);
@@ -133,17 +154,13 @@ const ServicoController = {
         }
     },
 
-    // ====================================================
     // 👥 Buscar serviços por cliente
-    // ====================================================
     async buscarPorCliente(req, res) {
         try {
             const empresa_id = req.user?.empresa_id;
             const { cliente_id } = req.query;
-
-            if (!empresa_id || !cliente_id) {
+            if (!empresa_id || !cliente_id)
                 return res.status(400).json({ erro: "empresa_id e cliente_id são obrigatórios" });
-            }
 
             const servicos = await ServicoRepository.buscarPorCliente(empresa_id, cliente_id);
             res.json(servicos);

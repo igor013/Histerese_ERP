@@ -1,186 +1,227 @@
-# ⚙️ Histerese ERP — Backend (Fase 2)
+# 🧠 Histerese ERP - Backend (Node.js + Express + PostgreSQL)
 
-Este é o backend oficial do **Histerese ERP**, desenvolvido em **Node.js + Express + PostgreSQL**.  
-A aplicação foi projetada para oferecer uma arquitetura modular, escalável e fácil de manter.
+> ✅ **Backend concluído (versão estável 2.0)**  
+> 🚀 Projeto modular, seguro e otimizado para ambiente corporativo.  
+> 💾 Desenvolvido em **Node.js + Express + PostgreSQL**, com autenticação JWT, upload de arquivos e backup automático.
 
 ---
 
-## 🧱 Estrutura do Projeto
+## 📦 **Tecnologias Utilizadas**
+
+- **Node.js** (v18+)
+- **Express**
+- **PostgreSQL**
+- **JWT (Json Web Token)**
+- **bcryptjs**
+- **dotenv**
+- **multer** (upload de arquivos)
+- **pg** (driver PostgreSQL)
+- **nodemon**
+- **cors**
+- **fs / path**
+- **dotenvx** (para variáveis de ambiente seguras)
+
+---
+
+## 🧩 **Estrutura do Projeto**
 
 ```
-📦 histerese-backend/
-├── src/
-│   ├── config/          # Configurações de banco e variáveis de ambiente
-│   ├── controllers/     # Controladores HTTP (lógica das requisições)
-│   ├── repositories/    # Acesso ao banco (queries SQL)
-│   ├── routes/          # Rotas da API Express
-│   ├── middlewares/     # Autenticação, erros, etc.
-│   ├── uploads/         # Armazenamento de logos/imagens
-│   └── database/        # Scripts SQL (init, reset e clean)
+histerese-backend/
 │
-├── .env                 # Variáveis de ambiente
-├── package.json         # Dependências e scripts npm
-└── server.js            # Servidor principal Express
+├── src/
+│   ├── config/              → Configurações do banco e ambiente
+│   ├── controllers/         → Lógica principal de cada módulo
+│   ├── middlewares/         → Autenticação, tratamento de erros e caixa alta
+│   ├── repositories/        → Consultas SQL organizadas por módulo
+│   ├── routes/              → Rotas Express
+│   ├── uploads/             → Armazenamento de logos/imagens
+│   └── database/            → Script init.sql e backups
+│
+├── .env                     → Configurações de ambiente (exemplo abaixo)
+├── .gitignore               → Exclusão de arquivos sensíveis
+├── package.json
+└── server.js                → Ponto principal do servidor
 ```
 
 ---
 
-## 🚀 Tecnologias Principais
+## ⚙️ **.env (exemplo)**
 
-| Tecnologia | Função |
-|-------------|--------|
-| **Node.js / Express** | Servidor web principal |
-| **PostgreSQL** | Banco de dados relacional |
-| **pg** | Conexão com o PostgreSQL |
-| **dotenv** | Variáveis de ambiente |
-| **bcryptjs** | Criptografia de senhas |
-| **jsonwebtoken (JWT)** | Autenticação e controle de acesso |
-| **multer** | Upload de arquivos (logos e imagens) |
-| **cors** | Permitir conexões entre domínios |
-| **nodemon** | Reload automático no modo dev |
-
----
-
-## 📦 Módulos Implementados
-
-| Módulo | Descrição |
-|--------|------------|
-| **Empresa** | Cadastro de empresas e upload de logo |
-| **Usuários** | Cadastro, login e autenticação JWT |
-| **Clientes** | CRUD completo com busca, paginação e exclusão lógica |
-| **Produtos** | Cadastro e controle de estoque básico |
-| **Fornecedores** | Cadastro e manutenção de fornecedores (multiempresa) |
-| **Equipamentos** | Vinculados a clientes, usados em ordens de serviço |
-| **Serviços (OS)** | Controle de ordens de serviço e histórico |
-| **Notas Fiscais** | Registro e controle de notas |
-| **Uploads** | Upload de imagens/logos com Multer |
-
----
-
-## 🔐 Autenticação Global (JWT)
-
-- O middleware `authMiddleware.js` protege todas as rotas após login.  
-- O login gera um token JWT que deve ser enviado no **header Authorization**:
-
-  ```
-  Authorization: Bearer <seu_token>
-  ```
-
-- As únicas rotas públicas são:
-  - `/api/auth` (login e registro)
-  - `/api/upload` (upload de imagens)
-
----
-
-## 🧠 Scripts npm
-
-Os comandos estão definidos no `package.json`:
-
-| Comando | Descrição |
-|----------|------------|
-| `npm start` | Inicia o servidor normalmente |
-| `npm run dev` | Inicia com nodemon (modo desenvolvimento) |
-| `npm run init-db` | Cria toda a estrutura do banco (`init.sql`) |
-| `npm run clean-db` | Limpa todos os dados (`clean.sql`) |
-| `npm run reset-db` | Recria o banco do zero (`reset.sql`) |
-
----
-
-## ⚙️ Variáveis de Ambiente (`.env`)
-
-Crie um arquivo `.env` na raiz do projeto com o conteúdo:
-
-```
+```env
 PORT=4000
-DB_USER=postgres
-DB_PASSWORD=sua_senha
 DB_HOST=localhost
 DB_PORT=5432
-DB_NAME=histerese_db
-JWT_SECRET=sua_chave_secreta
+DB_USER=postgres
+DB_PASSWORD=suasenha
+DB_DATABASE=histerese_db
+BACKUP_PATH=C:\Projetos\histerese-backend\src\database\backups
 ```
-
-> ⚠️ **Nunca envie o `.env` para o GitHub.**  
-> O arquivo já está listado no `.gitignore`.
 
 ---
 
-## 🧩 Teste rápido de conexão
+## 📥 **Instalação e Uso**
 
-Para verificar se o backend conecta ao banco de dados, acesse:
+1. **Clone o repositório:**
+   ```bash
+   git clone https://github.com/igor013/Histerese_ERP.git
+   cd Histerese_ERP
+   ```
 
+2. **Instale as dependências:**
+   ```bash
+   npm install
+   ```
+
+3. **Configure o arquivo `.env` conforme o exemplo acima.**
+
+4. **Inicie o servidor:**
+   ```bash
+   npm run dev
+   ```
+
+5. **Acesse no navegador:**
+   ```
+   http://localhost:4000
+   ```
+
+---
+
+## 🧱 **Módulos Implementados**
+
+| Módulo | Descrição |
+|---------|------------|
+| **Empresa** | Cadastro e gerenciamento de empresas |
+| **Usuários** | Cadastro, login com JWT, e controle multiempresa |
+| **Clientes** | CRUD completo com busca e paginação |
+| **Produtos** | Gerenciamento de produtos e estoque |
+| **Notas Fiscais** | Importação de XML, controle de itens e estoque |
+| **Equipamentos** | Cadastro vinculado ao cliente, com status e histórico |
+| **Serviços / OS** | Controle de ordens de serviço e status |
+| **Fornecedores** | Cadastro de fornecedores com exclusão lógica |
+| **Grupos** | Agrupamento de produtos e serviços |
+| **Uploads** | Envio de logos com Multer |
+| **Backup Automático** | Geração de arquivo `.sql` e download direto |
+| **Logs do Sistema** | Registro automático de ações (CRUD, login, backup) |
+| **Middleware de Caixa Alta** | Padroniza textos automaticamente em CAIXA ALTA |
+
+---
+
+## 🔐 **Autenticação e Segurança**
+
+- Login protegido com **JWT**
+- Hash de senhas com **bcryptjs**
+- Middleware de autenticação global (`authMiddleware.js`)
+- Exclusão lógica com campo `status` e registro em `logs`
+
+---
+
+## 🧾 **Módulo de Logs**
+
+Endpoint:
 ```
-GET http://localhost:4000/api/test-db
+GET /api/logs
 ```
 
-Retorno esperado:
+Retorno:
 ```json
 {
-  "conectado": true,
-  "hora_servidor": "2025-10-15T23:59:59.000Z"
+  "mensagem": "Foram encontrados 3 logs.",
+  "total": 3,
+  "logs": [
+    {
+      "id": 12,
+      "usuario_nome": "ADMINISTRADOR",
+      "empresa_nome": "EMPRESA DEMO LTDA",
+      "acao": "CRIAR",
+      "tabela": "CLIENTES",
+      "descricao": "CLIENTE CRIADO COM SUCESSO.",
+      "ip": "::1",
+      "criado_em": "2025-10-22 00:28:03"
+    }
+  ]
 }
 ```
 
 ---
 
-## 🧰 Estrutura Padrão das Tabelas
+## 🔠 **Middleware de Caixa Alta**
 
-Todas as tabelas seguem este modelo base:
+Arquivo: `src/middlewares/toUpperCaseMiddleware.js`
 
-```sql
-id SERIAL PRIMARY KEY,
-status VARCHAR DEFAULT 'ativo',
-criado_em TIMESTAMP DEFAULT NOW(),
-atualizado_em TIMESTAMP DEFAULT NOW()
-```
+Converte automaticamente os campos de texto para **MAIÚSCULAS**,  
+ignorando campos sensíveis como `senha`, `email`, `logo_url` etc.
 
-E todas possuem relacionamento com `empresa_id` (multiempresa).
-
----
-
-## 🧾 Banco de Dados
-
-Scripts SQL localizados em `/src/database/`:
-
-| Script | Função |
-|---------|--------|
-| `init.sql` | Cria todas as tabelas e relacionamentos |
-| `reset.sql` | Apaga e recria o banco do zero |
-| `clean.sql` | Limpa todos os dados (mantém estrutura) |
-
-Comandos disponíveis:
-```bash
-npm run init-db
-npm run reset-db
-npm run clean-db
+Exemplo:
+```js
+app.use(require("./src/middlewares/toUpperCaseMiddleware"));
 ```
 
 ---
 
-## 📦 Deploy Futuro (Fase 3)
+## 🗂️ **Banco de Dados**
 
-Próximos passos planejados:
-
-1. 🔑 Autenticação JWT completa com refresh token.  
-2. ⚙️ Middleware global de erros centralizado.  
-3. 🧮 Relatórios e dashboards de performance.  
-4. 🧾 Emissão de notas fiscais e controle de estoque integrado.  
-5. 🌐 Deploy em ambiente de produção (Render ou Railway).
+- Todas as tabelas criadas via script `init.sql`
+- Exclusão lógica por `status = 'inativo'` ou `status = 'excluido'`
+- Campos padronizados:
+  - `id` SERIAL PRIMARY KEY
+  - `criado_em` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  - `atualizado_em` TIMESTAMP
 
 ---
 
-## 👤 Autor
+## 🧰 **Backup Automático**
+
+Endpoint:
+```
+GET /api/backup
+```
+
+Cria e baixa automaticamente um arquivo `.sql` no diretório:
+```
+src/database/backups/
+```
+
+---
+
+## 🧩 **Logs Automáticos**
+
+Todas as operações CRUD geram log automaticamente:
+- **CRIAR**
+- **EDITAR**
+- **EXCLUIR**
+- **REATIVAR**
+
+Cada log contém:
+- Usuário responsável
+- Empresa vinculada
+- IP do cliente
+- Tabela e registro alterado
+- Data/hora formatada
+
+---
+
+## 📌 **Status Atual do Projeto**
+
+| Componente | Status |
+|-------------|--------|
+| Backend (API + Banco) | ✅ Concluído — v2.0 |
+| Middleware de Caixa Alta | ✅ Ativo |
+| Logs de Sistema | ✅ Ativo |
+| Backup Automático | ✅ Ativo |
+| Frontend ERP | 🚧 Em desenvolvimento |
+| Deploy | 🔜 Planejado |
+
+---
+
+## 👨‍💻 **Autor**
 
 **Igor Henrique Moreira Lusquinho**  
-📅 Atualizado em **Outubro de 2025**
+📧 Contato: (adicione e-mail ou LinkedIn se desejar)  
+💻 Projeto: [Histerese ERP](https://github.com/igor013/Histerese_ERP)
 
 ---
 
-## ✅ Status do Projeto
+## 🏁 **Licença**
 
-> 🚀 **Backend concluído ~90%**  
-> Aguardando integração final de autenticação JWT e padronização de logs de erro.
-
----
-
-**Histerese ERP — Organização, eficiência e controle para pequenas e médias empresas.**
+Este projeto é de uso interno e privado.  
+Não é permitida a distribuição sem autorização do autor.

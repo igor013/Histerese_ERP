@@ -1,5 +1,10 @@
+// ====================================================
+// 🧾 Histerese ERP - Controller: Notas (com logs)
+// ====================================================
+
 const notaRepo = require("../repositories/notaRepo");
 const { XMLParser } = require("fast-xml-parser");
+const { registrarLog } = require("../repositories/logRepo");
 
 // ============================================================
 // CRUD DE NOTAS
@@ -9,6 +14,22 @@ const { XMLParser } = require("fast-xml-parser");
 async function criar(req, res) {
   try {
     const nota = await notaRepo.criar(req.body);
+
+    // 🧾 LOG DE CRIAÇÃO
+    try {
+      await registrarLog({
+        usuario_id: req.user?.id,
+        empresa_id: req.user?.empresa_id,
+        acao: "CRIAR",
+        tabela: "notas",
+        registro_id: nota.id,
+        descricao: `Nota fiscal nº ${nota.numero || nota.id} criada com sucesso.`,
+        ip: req.ip,
+      });
+    } catch (logErr) {
+      console.error("⚠️ Falha ao registrar log de criação de nota:", logErr.message);
+    }
+
     res.status(201).json(nota);
   } catch (err) {
     console.error("Erro ao criar nota:", err);
@@ -47,6 +68,22 @@ async function atualizar(req, res) {
     const dados = req.body;
     const nota = await notaRepo.atualizar(id, dados);
     if (!nota) return res.status(404).json({ erro: "Nota não encontrada" });
+
+    // 🧾 LOG DE ATUALIZAÇÃO
+    try {
+      await registrarLog({
+        usuario_id: req.user?.id,
+        empresa_id: req.user?.empresa_id,
+        acao: "EDITAR",
+        tabela: "notas",
+        registro_id: id,
+        descricao: `Nota fiscal ${id} atualizada.`,
+        ip: req.ip,
+      });
+    } catch (logErr) {
+      console.error("⚠️ Falha ao registrar log de atualização de nota:", logErr.message);
+    }
+
     res.json(nota);
   } catch (err) {
     console.error("Erro ao atualizar nota:", err);
@@ -60,6 +97,22 @@ async function excluir(req, res) {
     const id = req.params.id;
     const nota = await notaRepo.excluir(id);
     if (!nota) return res.status(404).json({ erro: "Nota não encontrada" });
+
+    // 🧾 LOG DE EXCLUSÃO
+    try {
+      await registrarLog({
+        usuario_id: req.user?.id,
+        empresa_id: req.user?.empresa_id,
+        acao: "EXCLUIR",
+        tabela: "notas",
+        registro_id: id,
+        descricao: `Nota fiscal ${id} marcada como excluída.`,
+        ip: req.ip,
+      });
+    } catch (logErr) {
+      console.error("⚠️ Falha ao registrar log de exclusão de nota:", logErr.message);
+    }
+
     res.json({ mensagem: "Nota excluída com sucesso", nota });
   } catch (err) {
     console.error("Erro ao excluir nota:", err);
@@ -73,6 +126,22 @@ async function excluirItem(req, res) {
     const itemId = req.params.id;
     const resultado = await notaRepo.excluirItem(itemId);
     if (!resultado) return res.status(404).json({ erro: "Item não encontrado" });
+
+    // 🧾 LOG DE EXCLUSÃO DE ITEM
+    try {
+      await registrarLog({
+        usuario_id: req.user?.id,
+        empresa_id: req.user?.empresa_id,
+        acao: "EXCLUIR",
+        tabela: "nota_itens",
+        registro_id: itemId,
+        descricao: `Item ${itemId} excluído da nota.`,
+        ip: req.ip,
+      });
+    } catch (logErr) {
+      console.error("⚠️ Falha ao registrar log de exclusão de item de nota:", logErr.message);
+    }
+
     res.json(resultado);
   } catch (err) {
     console.error("Erro ao excluir item da nota:", err);
@@ -81,7 +150,7 @@ async function excluirItem(req, res) {
 }
 
 // ============================================================
-// IMPORTAÇÃO DE XML DE NF-e (corrigido com namespaces)
+// IMPORTAÇÃO DE XML DE NF-e
 // ============================================================
 async function importarXml(req, res) {
   try {
@@ -90,12 +159,10 @@ async function importarXml(req, res) {
     }
 
     const xmlRaw = req.file.buffer.toString("utf-8");
-
-    // Corrige namespaces problemáticos antes de parsear
     const xmlSanitizado = xmlRaw
-      .replace(/<\?xml.*?\?>/, "") // remove cabeçalho XML
-      .replace(/xmlns(:\w+)?="[^"]*"/g, "") // remove namespaces
-      .replace(/ns\d*:/g, ""); // remove prefixos tipo ns2:, ns3:
+      .replace(/<\?xml.*?\?>/, "")
+      .replace(/xmlns(:\w+)?="[^"]*"/g, "")
+      .replace(/ns\d*:/g, "");
 
     const parser = new XMLParser({
       ignoreAttributes: false,
@@ -107,9 +174,21 @@ async function importarXml(req, res) {
     });
 
     const parsed = parser.parse(xmlSanitizado);
-
-    // Passa XML para o repositório
     const resultado = await notaRepo.importarXml(parsed, xmlRaw);
+
+    // 🧾 LOG DE IMPORTAÇÃO XML
+    try {
+      await registrarLog({
+        usuario_id: req.user?.id,
+        empresa_id: req.user?.empresa_id,
+        acao: "IMPORTAR",
+        tabela: "notas",
+        descricao: `XML de nota importado com sucesso (${req.file.originalname}).`,
+        ip: req.ip,
+      });
+    } catch (logErr) {
+      console.error("⚠️ Falha ao registrar log de importação XML:", logErr.message);
+    }
 
     res.status(201).json(resultado);
   } catch (err) {
@@ -118,9 +197,8 @@ async function importarXml(req, res) {
   }
 }
 
-
 // ============================================================
-// EXPORTAÇÃO DAS FUNÇÕES
+// EXPORTAÇÃO
 // ============================================================
 module.exports = {
   criar,

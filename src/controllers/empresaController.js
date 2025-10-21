@@ -1,11 +1,9 @@
 // ====================================================
-// 🧩 CONTROLLER: EMPRESA
-// ====================================================
-// Responsável por receber as requisições, validar dados
-// e chamar o repositório (empresaRepo.js)
+// 🧩 CONTROLLER: EMPRESA (com logs)
 // ====================================================
 
 const empresaRepo = require("../repositories/empresaRepo");
+const { registrarLog } = require("../repositories/logRepo");
 
 // ====================================================
 // 📋 LISTAR TODAS AS EMPRESAS
@@ -67,7 +65,6 @@ async function criar(req, res) {
             return res.status(400).json({ erro: "O campo 'razao_social' é obrigatório." });
         }
 
-        // 🔍 Se quiser, pode validar CNPJ ou email aqui também
         const dados = {
             razao_social: razao_social.trim(),
             nome_fantasia: nome_fantasia || null,
@@ -87,6 +84,22 @@ async function criar(req, res) {
         };
 
         const nova = await empresaRepo.criar(dados);
+
+        // 🧾 LOG DE CRIAÇÃO
+        try {
+            await registrarLog({
+                usuario_id: req.user?.id,
+                empresa_id: nova.id,
+                acao: "CRIAR",
+                tabela: "empresa",
+                registro_id: nova.id,
+                descricao: `Empresa '${nova.razao_social || nova.nome_fantasia}' criada com sucesso.`,
+                ip: req.ip,
+            });
+        } catch (logErr) {
+            console.error("⚠️ Falha ao registrar log de criação de empresa:", logErr.message);
+        }
+
         return res.status(201).json({
             mensagem: "Empresa criada com sucesso",
             empresa: nova
@@ -114,6 +127,22 @@ async function atualizar(req, res) {
         }
 
         const atualizada = await empresaRepo.atualizar(id, dados);
+
+        // 🧾 LOG DE EDIÇÃO
+        try {
+            await registrarLog({
+                usuario_id: req.user?.id,
+                empresa_id: id,
+                acao: "EDITAR",
+                tabela: "empresa",
+                registro_id: id,
+                descricao: `Empresa '${atualizada?.razao_social || atualizada?.nome_fantasia}' atualizada.`,
+                ip: req.ip,
+            });
+        } catch (logErr) {
+            console.error("⚠️ Falha ao registrar log de atualização de empresa:", logErr.message);
+        }
+
         return res.json({
             mensagem: "Empresa atualizada com sucesso",
             empresa: atualizada
@@ -136,6 +165,21 @@ async function excluir(req, res) {
             return res.status(404).json({ erro: "Empresa não encontrada" });
         }
 
+        // 🧾 LOG DE EXCLUSÃO
+        try {
+            await registrarLog({
+                usuario_id: req.user?.id,
+                empresa_id: id,
+                acao: "EXCLUIR",
+                tabela: "empresa",
+                registro_id: id,
+                descricao: `Empresa '${empresa?.razao_social || empresa?.nome_fantasia}' marcada como inativa.`,
+                ip: req.ip,
+            });
+        } catch (logErr) {
+            console.error("⚠️ Falha ao registrar log de exclusão de empresa:", logErr.message);
+        }
+
         return res.json({
             mensagem: "Empresa excluída com sucesso",
             empresa
@@ -156,6 +200,21 @@ async function reativar(req, res) {
 
         if (!empresa) {
             return res.status(404).json({ erro: "Empresa não encontrada" });
+        }
+
+        // 🧾 LOG DE REATIVAÇÃO
+        try {
+            await registrarLog({
+                usuario_id: req.user?.id,
+                empresa_id: id,
+                acao: "REATIVAR",
+                tabela: "empresa",
+                registro_id: id,
+                descricao: `Empresa '${empresa?.razao_social || empresa?.nome_fantasia}' reativada.`,
+                ip: req.ip,
+            });
+        } catch (logErr) {
+            console.error("⚠️ Falha ao registrar log de reativação de empresa:", logErr.message);
         }
 
         return res.json({

@@ -2,6 +2,7 @@ const { exec } = require("child_process");
 const path = require("path");
 const fs = require("fs");
 require("dotenv").config();
+const { registrarLog } = require("../repositories/logRepo"); // 🧾 Log integrado
 
 // ====================================================
 // 🧭 Funções auxiliares
@@ -67,7 +68,7 @@ async function gerarBackup(req, res) {
         const childEnv = { ...process.env, PGPASSWORD: DB_PASSWORD || "" };
 
         return new Promise((resolve, reject) => {
-            exec(command, { env: childEnv, shell: true }, (error, stdout, stderr) => {
+            exec(command, { env: childEnv, shell: true }, async (error, stdout, stderr) => {
                 if (error) {
                     console.error("❌ Erro ao gerar backup:", stderr || error.message);
                     if (res) {
@@ -79,6 +80,24 @@ async function gerarBackup(req, res) {
                 }
 
                 console.log(`✅ Backup criado: ${filePath}`);
+
+                // 🧾 REGISTRO DE LOG (BACKUP)
+                try {
+                    const usuario_id = req?.user?.id || null;
+                    const empresa_id = req?.user?.empresa_id || null;
+
+                    await registrarLog({
+                        usuario_id,
+                        empresa_id,
+                        acao: "BACKUP",
+                        tabela: "backups",
+                        descricao: `Backup criado com sucesso: ${fileName}`,
+                        ip: req?.ip || null,
+                    });
+                } catch (logErr) {
+                    console.error("⚠️ Falha ao registrar log de backup:", logErr.message);
+                }
+
                 if (res) {
                     return res.json({
                         mensagem: "Backup criado com sucesso!",
@@ -103,11 +122,9 @@ async function gerarBackup(req, res) {
 // ====================================================
 async function downloadBackup(req, res) {
     try {
-        // 1️⃣ Gera um novo backup primeiro (sem resposta HTTP, apenas promessa)
         console.log("🛠️ Gerando novo backup antes do download...");
-        await gerarBackup(); // chamada direta da função acima
+        await gerarBackup(req); // passa o req para manter usuário e IP no log
 
-        // 2️⃣ Agora busca o arquivo mais recente
         const backupDir = resolveBackupDir();
         if (!fs.existsSync(backupDir)) {
             return res.status(404).json({ erro: "Nenhum backup encontrado (pasta inexistente)" });

@@ -1,5 +1,6 @@
 // src/controllers/clienteController.js
 const repo = require("../repositories/clienteRepo");
+const { registrarLog } = require("../repositories/logRepo");
 
 module.exports = {
     // ——— Criar cliente
@@ -24,7 +25,7 @@ module.exports = {
                 } else {
                     return res
                         .status(400)
-                        .json({ message: "Valor inválido para 'tipo_pessoa'. Use 'F' para Física ou 'J' para Jurídica." });
+                        .json({ message: "Valor inválido para 'tipo_pessoa'. Use 'F' ou 'J'." });
                 }
             }
 
@@ -32,6 +33,22 @@ module.exports = {
             if (body.cpf_cnpj) body.cpf_cnpj = body.cpf_cnpj.replace(/\D/g, "");
 
             const novo = await repo.criarCliente(body);
+
+            // 🧾 REGISTRA LOG DE CRIAÇÃO
+            try {
+                await registrarLog({
+                    usuario_id: req.user?.id,
+                    empresa_id: req.user?.empresa_id,
+                    acao: "CRIAR",
+                    tabela: "clientes",
+                    registro_id: novo.id,
+                    descricao: `Cliente ${novo.nome} criado com sucesso.`,
+                    ip: req.ip,
+                });
+            } catch (logErr) {
+                console.error("⚠️ Falha ao registrar log de criação de cliente:", logErr.message);
+            }
+
             res.status(201).json(novo);
         } catch (err) {
             console.error(err);
@@ -75,12 +92,10 @@ module.exports = {
             const { id } = req.params;
             const body = req.body;
 
-            // Validação básica
             if (!body?.nome) {
                 return res.status(400).json({ message: "O campo 'nome' é obrigatório." });
             }
 
-            // 🔒 Validação e normalização de tipo_pessoa
             if (body?.tipo_pessoa) {
                 const tipo = body.tipo_pessoa.toString().trim().toUpperCase();
                 if (["F", "FISICA", "FÍSICA"].includes(tipo)) {
@@ -90,7 +105,7 @@ module.exports = {
                 } else {
                     return res
                         .status(400)
-                        .json({ message: "Valor inválido para 'tipo_pessoa'. Use 'F' para Física ou 'J' para Jurídica." });
+                        .json({ message: "Valor inválido para 'tipo_pessoa'. Use 'F' ou 'J'." });
                 }
             }
 
@@ -99,6 +114,21 @@ module.exports = {
             const atualizado = await repo.atualizarCliente(id, body);
             if (!atualizado)
                 return res.status(404).json({ message: "Cliente não encontrado ou excluído." });
+
+            // 🧾 LOG DE ATUALIZAÇÃO
+            try {
+                await registrarLog({
+                    usuario_id: req.user?.id,
+                    empresa_id: req.user?.empresa_id,
+                    acao: "EDITAR",
+                    tabela: "clientes",
+                    registro_id: id,
+                    descricao: `Cliente ${id} atualizado.`,
+                    ip: req.ip,
+                });
+            } catch (logErr) {
+                console.error("⚠️ Falha ao registrar log de atualização:", logErr.message);
+            }
 
             res.json(atualizado);
         } catch (err) {
@@ -122,7 +152,7 @@ module.exports = {
                 } else {
                     return res
                         .status(400)
-                        .json({ message: "Valor inválido para 'tipo_pessoa'. Use 'F' para Física ou 'J' para Jurídica." });
+                        .json({ message: "Valor inválido para 'tipo_pessoa'. Use 'F' ou 'J'." });
                 }
             }
 
@@ -130,6 +160,22 @@ module.exports = {
 
             const atualizado = await repo.patchCliente(id, body);
             if (!atualizado) return res.status(404).json({ message: "Cliente não encontrado." });
+
+            // 🧾 LOG PATCH
+            try {
+                await registrarLog({
+                    usuario_id: req.user?.id,
+                    empresa_id: req.user?.empresa_id,
+                    acao: "EDITAR",
+                    tabela: "clientes",
+                    registro_id: id,
+                    descricao: "Atualização parcial de cliente.",
+                    ip: req.ip,
+                });
+            } catch (logErr) {
+                console.error("⚠️ Falha ao registrar log PATCH:", logErr.message);
+            }
+
             res.json(atualizado);
         } catch (err) {
             console.error(err);
@@ -143,6 +189,22 @@ module.exports = {
             const { id } = req.params;
             const deletado = await repo.excluirCliente(id);
             if (!deletado) return res.status(404).json({ message: "Cliente não encontrado." });
+
+            // 🧾 LOG DE EXCLUSÃO
+            try {
+                await registrarLog({
+                    usuario_id: req.user?.id,
+                    empresa_id: req.user?.empresa_id,
+                    acao: "EXCLUIR",
+                    tabela: "clientes",
+                    registro_id: id,
+                    descricao: `Cliente ${id} marcado como inativo.`,
+                    ip: req.ip,
+                });
+            } catch (logErr) {
+                console.error("⚠️ Falha ao registrar log de exclusão:", logErr.message);
+            }
+
             res.json({ message: "Cliente excluído com sucesso.", cliente: deletado });
         } catch (err) {
             console.error(err);
@@ -156,6 +218,22 @@ module.exports = {
             const { id } = req.params;
             const restaurado = await repo.restaurarCliente(id);
             if (!restaurado) return res.status(404).json({ message: "Cliente não encontrado." });
+
+            // 🧾 LOG DE REATIVAÇÃO
+            try {
+                await registrarLog({
+                    usuario_id: req.user?.id,
+                    empresa_id: req.user?.empresa_id,
+                    acao: "REATIVAR",
+                    tabela: "clientes",
+                    registro_id: id,
+                    descricao: `Cliente ${id} restaurado.`,
+                    ip: req.ip,
+                });
+            } catch (logErr) {
+                console.error("⚠️ Falha ao registrar log de restauração:", logErr.message);
+            }
+
             res.json({ message: "Cliente restaurado com sucesso.", cliente: restaurado });
         } catch (err) {
             console.error(err);

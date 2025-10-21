@@ -5,6 +5,7 @@
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcryptjs");
 const db = require("../config/db");
+const { registrarLog } = require("../repositories/logRepo");
 
 // ====================================================
 // 🧩 LOGIN
@@ -44,6 +45,17 @@ async function login(req, res, next) {
             process.env.JWT_SECRET,
             { expiresIn: process.env.JWT_EXPIRES || "8h" }
         );
+
+        // 🧾 REGISTRO DE LOG (LOGIN)
+        await registrarLog({
+            usuario_id: usuario.id,
+            empresa_id: usuario.empresa_id,
+            acao: "LOGIN",
+            tabela: "usuarios",
+            registro_id: usuario.id,
+            descricao: `Usuário ${usuario.nome} fez login na empresa ${usuario.empresa_id}.`,
+            ip: req.ip,
+        });
 
         res.status(200).json({
             mensagem: "Login realizado com sucesso!",
