@@ -1,5 +1,5 @@
 // ====================================================
-// 🧠 Histerese ERP - Servidor Principal (Versão Final)
+// 🧠 Histerese ERP - Servidor Principal (Versão Final Corrigida)
 // ====================================================
 
 require("dotenv").config();
@@ -8,7 +8,6 @@ const cors = require("cors");
 const path = require("path");
 const db = require("./src/config/db");
 const errorHandler = require("./src/middlewares/errorHandler");
-const verificarToken = require("./src/middlewares/authMiddleware");
 
 const app = express();
 
@@ -34,27 +33,24 @@ app.get("/", (req, res) => {
     });
 });
 
-// Rota pública de autenticação
-app.use("/api/auth", require("./src/routes/authRoutes"));
+// Login e criação de usuários são rotas públicas
+app.use("/api/usuarios", require("./src/routes/usuarioRoutes"));
 
 // ====================================================
 // 🔐 ROTAS PROTEGIDAS (JWT)
 // ====================================================
-app.use(verificarToken);
-
-// 🔹 Módulos principais
-app.use("/api/empresas", require("./src/routes/empresaRoutes"));
-app.use("/api/usuarios", require("./src/routes/usuarioRoutes"));
-app.use("/api/clientes", require("./src/routes/clienteRoutes"));
-app.use("/api/produtos", require("./src/routes/produtoRoutes"));
-app.use("/api/notas", require("./src/routes/notaRoutes"));
-app.use("/api/equipamentos", require("./src/routes/equipamentoRoutes"));
-app.use("/api/grupos", require("./src/routes/grupoRoutes"));
-app.use("/api/fornecedores", require("./src/routes/fornecedorRoutes"));
-app.use("/api/upload", require("./src/routes/uploadRoutes"));
-app.use("/api/backup", require("./src/routes/backupRoutes"));
-app.use("/api/servicos", require("./src/routes/servicoRoutes"));
-app.use("/api/logs", require("./src/routes/logRoutes")); // 🧾 Módulo de Logs
+const authMiddleware = require("./src/middlewares/authMiddleware");
+app.use("/api/empresas", authMiddleware, require("./src/routes/empresaRoutes"));
+app.use("/api/clientes", authMiddleware, require("./src/routes/clienteRoutes"));
+app.use("/api/produtos", authMiddleware, require("./src/routes/produtoRoutes"));
+app.use("/api/notas", authMiddleware, require("./src/routes/notaRoutes"));
+app.use("/api/equipamentos", authMiddleware, require("./src/routes/equipamentoRoutes"));
+app.use("/api/grupos", authMiddleware, require("./src/routes/grupoRoutes"));
+app.use("/api/fornecedores", authMiddleware, require("./src/routes/fornecedorRoutes"));
+app.use("/api/upload", authMiddleware, require("./src/routes/uploadRoutes"));
+app.use("/api/backup", authMiddleware, require("./src/routes/backupRoutes"));
+app.use("/api/servicos", authMiddleware, require("./src/routes/servicoRoutes"));
+app.use("/api/logs", authMiddleware, require("./src/routes/logRoutes"));
 
 // ====================================================
 // ⚙️ MIDDLEWARE GLOBAL DE ERROS

@@ -1,3 +1,7 @@
+# =========================================================
+# 🚀 Histerese ERP - .gitignore (Node.js + React + PostgreSQL)
+# =========================================================
+
 # ==========================
 # Node.js / Express backend
 # ==========================
@@ -6,7 +10,10 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
-package-lock.json
+# Mantenha o package-lock.json versionado
+# (importante para reprodutibilidade das dependências)
+# package-lock.json
+
 .env
 .env.local
 .env.*.local
@@ -18,21 +25,21 @@ logs/
 *.log
 
 # ==========================
-# React frontend (se existir)
+# React frontend (caso exista)
 # ==========================
-/build
-/dist
-/out
-/.next
-/.vercel
-/.parcel-cache
+build/
+dist/
+out/
+.next/
+.vercel/
+.parcel-cache/
 
 .env.development.local
 .env.test.local
 .env.production.local
 
 # ==========================
-# IDE and OS junk
+# IDEs e arquivos de sistema
 # ==========================
 .vscode/
 .idea/
@@ -48,18 +55,19 @@ Icon?
 Desktop.ini
 
 # ==========================
-# Database and data dumps
+# Banco de dados e backups
 # ==========================
-/src/database/backups/
+src/database/backups/
+src/database/dumps/
 *.sql
 *.dump
 *.bak
 *.backup
 
 # ==========================
-# Logs and runtime data
+# Logs e arquivos temporários
 # ==========================
-/pids
+pids/
 *.pid
 *.seed
 *.pid.lock
@@ -67,34 +75,42 @@ Desktop.ini
 *.tgz
 
 # ==========================
-# Test coverage
+# Testes e cobertura
 # ==========================
-/coverage
-/.nyc_output
+coverage/
+.nyc_output/
 
 # ==========================
-# Build tools and misc
+# Ferramentas de build
 # ==========================
-/bower_components
-/.eslintcache
-/.stylelintcache
-/.parcel-cache
-/.cache-loader
+bower_components/
+.eslintcache
+.stylelintcache
+.parcel-cache
+.cache-loader
 *.tsbuildinfo
-/.turbo
-/.idea
-/.envrc
-/.editorconfig
+.turbo/
+.idea/
+.envrc
+.editorconfig
 *.iml
 
 # ==========================
 # ERP Specific Folders
 # ==========================
-# Uploads de logos, imagens e backups automáticos
-/src/uploads/
+# Uploads e backups automáticos
 src/uploads/
+src/uploads/logos/
+src/uploads/temp/
 src/database/backups/
 
 # Arquivos de configuração sensíveis
 src/config/db.js
 src/config/keys.js
+
+# ==========================
+# Outros opcionais (Windows / Linux)
+# ==========================
+*.bat
+*.sh
+*.cmd
