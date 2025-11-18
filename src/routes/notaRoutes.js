@@ -1,56 +1,56 @@
-// ====================================================
-// 🧾 ROTAS: NOTAS FISCAIS
-// ====================================================
-// Define os endpoints relacionados à tabela "notas"
-// Todas as rotas exigem autenticação JWT
-// ====================================================
-
+// src/routes/notaRoutes.js
 const express = require("express");
-const multer = require("multer");
 const router = express.Router();
-const upload = multer({ storage: multer.memoryStorage() });
 
 const notaController = require("../controllers/notaController");
-const authMiddleware = require("../middlewares/authMiddleware");
+const auth = require("../middlewares/authMiddleware");
 
-// ====================================================
-// 🔒 Middleware global de autenticação
-// ====================================================
-router.use(authMiddleware);
+// Upload XML
+const multer = require("multer");
 
-// ====================================================
-// 🧩 ROTAS
-// ====================================================
+// Armazena em memória para evitar problemas de path no Windows
+const upload = multer({ storage: multer.memoryStorage() });
 
-// Importar XML da nota fiscal
-// POST /api/notas/import/xml
-router.post("/import/xml", upload.single("file"), notaController.importarXml);
+// -------------------------------------------------------------
+// ROTAS DE NOTAS FISCAIS
+// -------------------------------------------------------------
 
-// Criar nova nota
-// POST /api/notas
-router.post("/", notaController.criar);
+// 🧾 Listar notas
+router.get("/", auth, notaController.listarNotas);
 
-// Listar notas
-// GET /api/notas
-router.get("/", notaController.listar);
+// 🔎 Buscar nota (com itens)
+router.get("/:id", auth, notaController.buscarNota);
 
-// Buscar nota por ID
-// GET /api/notas/:id
-router.get("/:id", notaController.buscarPorId);
+// ➕ Criar nota (com itens)
+router.post("/", auth, notaController.criarNota);
 
-// Atualizar nota
-// PUT /api/notas/:id
-router.put("/:id", notaController.atualizar);
+// ✏ Atualizar nota
+router.put("/:id", auth, notaController.atualizarNota);
 
-// Excluir nota (exclusão lógica)
-// DELETE /api/notas/:id
-router.delete("/:id", notaController.excluir);
+// 🗑 Excluir nota
+router.delete("/:id", auth, notaController.excluirNota);
 
-// Excluir item de nota
-// DELETE /api/notas/itens/:id
-router.delete("/itens/:id", notaController.excluirItem);
+// -------------------------------------------------------------
+// IMPORTAÇÃO DE XML
+// -------------------------------------------------------------
+router.post(
+    "/import/xml",
+    auth,
+    upload.single("file"), // campo "file" vindo do front
+    notaController.importarXml
+);
 
-// ====================================================
-// 📘 EXPORTAÇÃO DO MÓDULO
-// ====================================================
+// -------------------------------------------------------------
+// ITENS DA NOTA
+// -------------------------------------------------------------
+
+// ➕ Adicionar item a uma nota
+router.post("/:id/itens", auth, notaController.adicionarItem);
+
+// ✏ Atualizar item
+router.put("/itens/:itemId", auth, notaController.atualizarItem);
+
+// 🗑 Excluir item
+router.delete("/itens/:itemId", auth, notaController.excluirItem);
+
 module.exports = router;

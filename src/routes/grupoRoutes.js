@@ -1,32 +1,23 @@
 // ====================================================
-// 🧩 ROTAS: GRUPOS
-// ====================================================
-// Define os endpoints relacionados à tabela "grupos"
-// Todas as rotas exigem autenticação JWT
+// 🧩 ROTAS: GRUPOS (ERP Histerese 2.0)
 // ====================================================
 
 const express = require("express");
 const router = express.Router();
 const grupoController = require("../controllers/grupoController");
-const authMiddleware = require("../middlewares/authMiddleware");
 
 // ====================================================
-// 🔒 Middleware global de autenticação
-// ====================================================
-router.use(authMiddleware);
-
-// ====================================================
-// 🧠 ROTAS
+// 📘 ROTAS
 // ====================================================
 
-// Listar grupos
+// Criar grupo
+router.post("/", grupoController.criar);
+
+// Listar grupos (?q=&page=&limit=)
 router.get("/", grupoController.listar);
 
-// Obter grupo por ID
-router.get("/:id", grupoController.obter);
-
-// Criar novo grupo
-router.post("/", grupoController.criar);
+// Buscar por ID
+router.get("/:id", grupoController.buscarPorId);
 
 // Atualizar grupo
 router.put("/:id", grupoController.atualizar);
@@ -34,7 +25,4 @@ router.put("/:id", grupoController.atualizar);
 // Exclusão lógica
 router.delete("/:id", grupoController.excluir);
 
-// ====================================================
-// 📘 EXPORTAÇÃO DO MÓDULO
-// ====================================================
 module.exports = router;

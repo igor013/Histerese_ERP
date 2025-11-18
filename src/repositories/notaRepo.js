@@ -1,425 +1,236 @@
-const  pool  = require("../config/db");
+// src/repositories/notaRepo.js
+const db = require("../config/db");
 
 // ============================================================
-// FUNÇÕES ORIGINAIS
+// LISTAR NOTAS
 // ============================================================
+exports.buscarTodos = async (empresa_id, { page = 1, limit = 100, q = "" }) => {
+  const offset = (page - 1) * limit;
 
-// Criar nota com itens
-async function criar({ numero, fornecedor_id, data_emissao, valor_total, itens }) {
-  const client = await pool.connect();
-  try {
-    await client.query("BEGIN");
+  let filtro = "";
+  const params = [empresa_id, limit, offset];
 
-    // Inserir nota
-    const notaQuery = `
-      INSERT INTO notas_fiscais (numero, fornecedor_id, data_emissao, valor_total, status)
-      VALUES ($1, $2, $3, $4, 'ativo')
-      RETURNING *;
+  if (q) {
+    filtro = `
+      AND (
+        unaccent(lower(n.numero_nota)) LIKE unaccent(lower($4))
+        OR unaccent(lower(f.nome)) LIKE unaccent(lower($4))
+        OR unaccent(lower(n.chave_acesso)) LIKE unaccent(lower($4))
+      )
     `;
-    const { rows: notaRows } = await client.query(notaQuery, [
-      numero,
-      fornecedor_id,
-      data_emissao,
-      valor_total,
-    ]);
-    const nota = notaRows[0];
-
-    // Inserir itens e atualizar estoque
-    for (const item of itens) {
-      const itemQuery = `
-        INSERT INTO nota_itens (nota_id, produto_id, quantidade, unidade_medida, valor_unitario, status)
-        VALUES ($1, $2, $3, $4, $5, 'ativo')
-        RETURNING *;
-      `;
-      await client.query(itemQuery, [
-        nota.id,
-        item.produto_id,
-        item.quantidade,
-        item.unidade_medida,
-        item.valor_unitario,
-      ]);
-
-      // Atualizar estoque
-      await client.query(
-        `UPDATE produtos SET quantidade = quantidade + $1 WHERE id = $2`,
-        [item.quantidade, item.produto_id]
-      );
-    }
-
-    await client.query("COMMIT");
-    return nota;
-  } catch (err) {
-    await client.query("ROLLBACK");
-    throw err;
-  } finally {
-    client.release();
+    params.push(`%${q}%`);
   }
-}
 
-// Listar todas as notas
-async function listar() {
-  const { rows } = await pool.query(`
-    SELECT n.*, f.nome AS fornecedor_nome
-    FROM notas_fiscais n
-    LEFT JOIN fornecedores f ON n.fornecedor_id = f.id
-    WHERE n.status='ativo'
-    ORDER BY n.id DESC
-  `);
-  return rows;
-}
-
-// Buscar nota + itens
-async function buscarPorId(id) {
-  const { rows: notaRows } = await pool.query(
-    "SELECT * FROM notas_fiscais WHERE id=$1 AND status='ativo'",
-    [id]
-  );
-  if (notaRows.length === 0) return null;
-
-  const { rows: itens } = await pool.query(
-    "SELECT * FROM nota_itens WHERE nota_id=$1 AND status='ativo'",
-    [id]
+  const result = await db.query(
+    `
+      SELECT 
+          n.id,
+          n.numero_nota,
+          n.serie,
+          n.fornecedor_id,
+          f.nome AS fornecedor_nome,
+          n.data_emissao,
+          n.valor_total,
+          n.status,
+          n.chave_acesso,
+          n.criado_em,
+          n.atualizado_em
+      FROM notas n
+      LEFT JOIN fornecedores f ON f.id = n.fornecedor_id
+      WHERE n.empresa_id = $1
+      ${filtro}
+      ORDER BY n.id DESC
+      LIMIT $2 OFFSET $3
+    `,
+    params
   );
 
-  return { ...notaRows[0], itens };
-}
+  return result.rows;
+};
 
-// Atualizar nota (só cabeçalho)
-async function atualizar(id, { numero, fornecedor_id, data_emissao, valor_total }) {
-  const query = `
-    UPDATE notas_fiscais
-    SET numero=$1, fornecedor_id=$2, data_emissao=$3, valor_total=$4
-    WHERE id=$5
-    RETURNING *;
-  `;
-  const { rows } = await pool.query(query, [
-    numero,
+// ============================================================
+// BUSCAR NOTA POR ID
+// ============================================================
+exports.buscarPorId = async (id, empresa_id) => {
+  const result = await db.query(
+    `
+      SELECT 
+          *
+      FROM notas
+      WHERE id = $1
+        AND empresa_id = $2
+      LIMIT 1
+    `,
+    [id, empresa_id]
+  );
+
+  return result.rows[0] || null;
+};
+
+// ============================================================
+// CRIAR NOTA (somente cabeçalho — itens são no controller)
+// ============================================================
+exports.criar = async (empresa_id, dados) => {
+  const {
+    numero_nota,
+    serie,
     fornecedor_id,
     data_emissao,
     valor_total,
-    id,
-  ]);
-  return rows[0];
-}
+    chave_acesso,
+    inscricao_estadual,
+    cnpj_fornecedor,
+    razao_social_fornecedor,
+    endereco_fornecedor,
+    cidade_fornecedor,
+    uf_fornecedor,
+    icms,
+    ipi,
+    pis,
+    cofins,
+    issqn,
+  } = dados;
 
-// Exclusão lógica de nota inteira + ajuste de estoque
-async function excluir(id) {
-  const client = await pool.connect();
-  try {
-    await client.query("BEGIN");
-
-    // Buscar os itens da nota
-    const { rows: itens } = await client.query(
-      "SELECT produto_id, quantidade FROM nota_itens WHERE nota_id=$1 AND status='ativo'",
-      [id]
-    );
-
-    // Subtrair do estoque cada item
-    for (const item of itens) {
-      await client.query(
-        "UPDATE produtos SET quantidade = quantidade - $1 WHERE id = $2",
-        [item.quantidade, item.produto_id]
-      );
-    }
-
-    // Marcar itens e nota como excluídos
-    await client.query("UPDATE nota_itens SET status='excluido' WHERE nota_id=$1", [id]);
-    const { rows } = await client.query(
-      "UPDATE notas_fiscais SET status='excluido' WHERE id=$1 RETURNING *",
-      [id]
-    );
-
-    await client.query("COMMIT");
-    return rows[0];
-  } catch (err) {
-    await client.query("ROLLBACK");
-    throw err;
-  } finally {
-    client.release();
-  }
-}
-
-// Exclusão lógica de um item da nota + ajuste de estoque + exclusão automática da nota se esvaziar
-async function excluirItem(itemId) {
-  const client = await pool.connect();
-  try {
-    await client.query("BEGIN");
-
-    // Buscar item
-    const { rows: itens } = await client.query(
-      "SELECT nota_id, produto_id, quantidade FROM nota_itens WHERE id=$1 AND status='ativo'",
-      [itemId]
-    );
-
-    if (itens.length === 0) {
-      await client.query("ROLLBACK");
-      return null;
-    }
-
-    const item = itens[0];
-
-    // Ajustar estoque (remover quantidade)
-    await client.query(
-      "UPDATE produtos SET quantidade = quantidade - $1 WHERE id=$2",
-      [item.quantidade, item.produto_id]
-    );
-
-    // Marcar item como excluído
-    await client.query("UPDATE nota_itens SET status='excluido' WHERE id=$1", [itemId]);
-
-    // Recalcular o total da nota
-    const { rows: soma } = await client.query(
-      `SELECT COALESCE(SUM(valor_total), 0) AS total
-       FROM nota_itens
-       WHERE nota_id=$1 AND status='ativo'`,
-      [item.nota_id]
-    );
-
-    const novoTotal = parseFloat(soma[0].total || 0);
-
-    await client.query("UPDATE notas_fiscais SET valor_total=$1 WHERE id=$2", [
-      novoTotal,
-      item.nota_id,
-    ]);
-
-    // Se não houver mais itens ativos, marcar a nota como excluída
-    const { rows: itensAtivos } = await client.query(
-      "SELECT COUNT(*) FROM nota_itens WHERE nota_id=$1 AND status='ativo'",
-      [item.nota_id]
-    );
-
-    if (parseInt(itensAtivos[0].count) === 0) {
-      await client.query("UPDATE notas_fiscais SET status='excluido' WHERE id=$1", [
-        item.nota_id,
-      ]);
-    }
-
-    await client.query("COMMIT");
-    return { mensagem: "Item excluído e nota atualizada com sucesso" };
-  } catch (err) {
-    await client.query("ROLLBACK");
-    throw err;
-  } finally {
-    client.release();
-  }
-}
-
-// Reduzir quantidade de um item (qualquer valor positivo menor que a atual)
-async function reduzirItem(itemId, qtdAReduzir) {
-  const client = await pool.connect();
-  try {
-    await client.query("BEGIN");
-
-    const { rows: itens } = await client.query(
-      "SELECT nota_id, produto_id, quantidade, valor_unitario FROM nota_itens WHERE id=$1 AND status='ativo'",
-      [itemId]
-    );
-
-    if (itens.length === 0) {
-      await client.query("ROLLBACK");
-      return null;
-    }
-
-    const item = itens[0];
-    const novaQtd = item.quantidade - qtdAReduzir;
-
-    if (qtdAReduzir <= 0) throw new Error("A quantidade a reduzir deve ser maior que zero");
-    if (novaQtd < 0) throw new Error("Não é possível reduzir além da quantidade existente");
-
-    await client.query(
-      `UPDATE nota_itens
-       SET quantidade=$1, valor_total=($1 * valor_unitario)
-       WHERE id=$2`,
-      [novaQtd, itemId]
-    );
-
-    await client.query("UPDATE produtos SET quantidade = quantidade - $1 WHERE id=$2", [
-      qtdAReduzir,
-      item.produto_id,
-    ]);
-
-    const { rows: soma } = await client.query(
-      `SELECT COALESCE(SUM(valor_total), 0) AS total
-       FROM nota_itens
-       WHERE nota_id=$1 AND status='ativo'`,
-      [item.nota_id]
-    );
-
-    const novoTotal = parseFloat(soma[0].total || 0);
-    await client.query("UPDATE notas_fiscais SET valor_total=$1 WHERE id=$2", [
-      novoTotal,
-      item.nota_id,
-    ]);
-
-    await client.query("COMMIT");
-    return {
-      item_id: itemId,
-      quantidade_reduzida: qtdAReduzir,
-      nova_quantidade: novaQtd,
-      novo_total_nota: novoTotal,
-    };
-  } catch (err) {
-    await client.query("ROLLBACK");
-    throw err;
-  } finally {
-    client.release();
-  }
-}
-
-// ============================================================
-// IMPORTAR XML DE NF-e
-// ============================================================
-async function importarXml(parsedXml, xmlRaw) {
-  const client = await pool.connect();
-  try {
-    await client.query("BEGIN");
-
-    const nfe = parsedXml?.nfeProc?.NFe || parsedXml?.NFe;
-    if (!nfe) throw new Error("XML inválido: estrutura <NFe> não encontrada.");
-
-    const infNFe = nfe.infNFe || nfe["infNFe"];
-    const ide = infNFe.ide;
-    const emit = infNFe.emit;
-    const dest = infNFe.dest;
-    const itens = Array.isArray(infNFe.det) ? infNFe.det : [infNFe.det];
-    const total = infNFe.total?.ICMSTot;
-
-    // Chave da nota
-    const chave = infNFe["@_Id"]?.replace(/^NFe/, "") || "sem_chave";
-
-    // Verifica duplicidade
-    const existe = await client.query(
-      "SELECT id FROM notas_fiscais WHERE chave_acesso=$1",
-      [chave]
-    );
-    if (existe.rows.length > 0) {
-      await client.query("ROLLBACK");
-      return { status: "skipped", access_key: chave };
-    }
-
-    // Cria fornecedor se necessário
-    let fornecedor_id = null;
-    if (emit?.CNPJ) {
-      const { rows } = await client.query(
-        "SELECT id FROM fornecedores WHERE cnpj=$1",
-        [emit.CNPJ]
-      );
-      if (rows.length > 0) {
-        fornecedor_id = rows[0].id;
-      } else {
-        const insertFornecedor = await client.query(
-          "INSERT INTO fornecedores (nome, cnpj, status) VALUES ($1, $2, 'ativo') RETURNING id",
-          [emit.xNome, emit.CNPJ]
-        );
-        fornecedor_id = insertFornecedor.rows[0].id;
-      }
-    }
-
-    // Insere nota
-    const insertNota = await client.query(
-      `INSERT INTO notas_fiscais 
-        (chave_acesso, modelo, serie, numero, fornecedor_id, data_emissao, tipo_operacao, cnpj_emitente, cnpj_destinatario, valor_total, status)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,'ativo')
-       RETURNING id`,
-      [
-        chave,
-        ide.mod,
-        ide.serie,
-        ide.nNF,
+  const result = await db.query(
+    `
+      INSERT INTO notas (
+        empresa_id,
+        numero_nota,
+        serie,
         fornecedor_id,
-        ide.dhEmi,
-        ide.tpNF === "0" ? 0 : 1, // 0=entrada, 1=saída
-        emit.CNPJ,
-        dest?.CNPJ || dest?.CPF || null,
-        parseFloat(total?.vNF || 0),
-      ]
-    );
+        data_emissao,
+        valor_total,
+        chave_acesso,
+        inscricao_estadual,
+        cnpj_fornecedor,
+        razao_social_fornecedor,
+        endereco_fornecedor,
+        cidade_fornecedor,
+        uf_fornecedor,
+        icms,
+        ipi,
+        pis,
+        cofins,
+        issqn
+      ) VALUES (
+        $1,$2,$3,$4,$5,$6,$7,
+        $8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18
+      )
+      RETURNING *
+    `,
+    [
+      empresa_id,
+      numero_nota || null,
+      serie || null,
+      fornecedor_id || null,
+      data_emissao || null,
+      valor_total || null,
+      chave_acesso || null,
+      inscricao_estadual || null,
+      cnpj_fornecedor || null,
+      razao_social_fornecedor || null,
+      endereco_fornecedor || null,
+      cidade_fornecedor || null,
+      uf_fornecedor || null,
+      icms || 0,
+      ipi || 0,
+      pis || 0,
+      cofins || 0,
+      issqn || 0,
+    ]
+  );
 
-    const nota_id = insertNota.rows[0].id;
-
-    // Insere itens da nota
-    for (const det of itens) {
-      const prod = det.prod;
-      if (!prod?.cProd) continue;
-
-      // Garante produto no banco
-      let produto_id;
-      const busca = await client.query("SELECT id FROM produtos WHERE codigo=$1", [prod.cProd]);
-      if (busca.rows.length > 0) {
-        produto_id = busca.rows[0].id;
-      } else {
-        // --- GARANTE EXISTÊNCIA DO GRUPO PADRÃO "Importados NF-e" ---
-        let grupo_id;
-        const grupo = await client.query("SELECT id FROM grupos WHERE nome = 'Importados NF-e'");
-        if (grupo.rows.length > 0) {
-          grupo_id = grupo.rows[0].id;
-        } else {
-          const novoGrupo = await client.query(
-            "INSERT INTO grupos (nome, status) VALUES ('Importados NF-e', 'ativo') RETURNING id"
-          );
-          grupo_id = novoGrupo.rows[0].id;
-        }
-
-        // --- INSERE PRODUTO (com grupo_id garantido) ---
-        const insertProd = await client.query(
-          `INSERT INTO produtos (codigo, nome, ncm, unidade, quantidade, valor_unitario, grupo_id, status)
-   VALUES ($1,$2,$3,$4,$5,$6,$7,'ativo') RETURNING id`,
-          [
-            prod.cProd,
-            prod.xProd,
-            prod.NCM,
-            prod.uCom,
-            parseFloat(prod.qCom || 0),
-            parseFloat(prod.vUnCom || 0),
-            grupo_id, // <-- aqui está o segredo
-          ]
-        );
-
-        produto_id = insertProd.rows[0].id;
-      }
-
-      // Cria item da nota
-      await client.query(
-        `INSERT INTO nota_itens (nota_id, produto_id, quantidade, unidade_medida, valor_unitario, status)
-         VALUES ($1,$2,$3,$4,$5,'ativo')`,
-        [
-          nota_id,
-          produto_id,
-          parseFloat(prod.qCom || 0),
-          prod.uCom,
-          parseFloat(prod.vUnCom || 0),
-        ]
-      );
-
-      // Atualiza estoque
-      await client.query(
-        "UPDATE produtos SET quantidade = quantidade + $1 WHERE id=$2",
-        [parseFloat(prod.qCom || 0), produto_id]
-      );
-    }
-
-    await client.query("COMMIT");
-    return { status: "imported", access_key: chave };
-  } catch (err) {
-    await client.query("ROLLBACK");
-    console.error("Erro em importarXml:", err);
-    throw err;
-  } finally {
-    client.release();
-  }
-}
-
+  return result.rows[0];
+};
 
 // ============================================================
-// EXPORTA TUDO
+// ATUALIZAR NOTA
 // ============================================================
-module.exports = {
-  criar,
-  listar,
-  buscarPorId,
-  atualizar,
-  excluir,
-  excluirItem,
-  reduzirItem,
-  importarXml,
+exports.atualizar = async (id, empresa_id, dados) => {
+  const {
+    numero_nota,
+    serie,
+    fornecedor_id,
+    data_emissao,
+    valor_total,
+    chave_acesso,
+    inscricao_estadual,
+    cnpj_fornecedor,
+    razao_social_fornecedor,
+    endereco_fornecedor,
+    cidade_fornecedor,
+    uf_fornecedor,
+    icms,
+    ipi,
+    pis,
+    cofins,
+    issqn,
+  } = dados;
+
+  const result = await db.query(
+    `
+      UPDATE notas SET
+        numero_nota = $1,
+        serie = $2,
+        fornecedor_id = $3,
+        data_emissao = $4,
+        valor_total = $5,
+        chave_acesso = $6,
+        inscricao_estadual = $7,
+        cnpj_fornecedor = $8,
+        razao_social_fornecedor = $9,
+        endereco_fornecedor = $10,
+        cidade_fornecedor = $11,
+        uf_fornecedor = $12,
+        icms = $13,
+        ipi = $14,
+        pis = $15,
+        cofins = $16,
+        issqn = $17,
+        atualizado_em = NOW()
+      WHERE id = $18
+        AND empresa_id = $19
+      RETURNING *
+    `,
+    [
+      numero_nota || null,
+      serie || null,
+      fornecedor_id || null,
+      data_emissao || null,
+      valor_total || null,
+      chave_acesso || null,
+      inscricao_estadual || null,
+      cnpj_fornecedor || null,
+      razao_social_fornecedor || null,
+      endereco_fornecedor || null,
+      cidade_fornecedor || null,
+      uf_fornecedor || null,
+      icms || 0,
+      ipi || 0,
+      pis || 0,
+      cofins || 0,
+      issqn || 0,
+      id,
+      empresa_id,
+    ]
+  );
+
+  return result.rows[0];
+};
+
+// ============================================================
+// EXCLUIR NOTA
+// ============================================================
+exports.excluir = async (id, empresa_id) => {
+  const result = await db.query(
+    `
+      DELETE FROM notas
+      WHERE id = $1
+        AND empresa_id = $2
+      RETURNING *
+    `,
+    [id, empresa_id]
+  );
+
+  return result.rows[0];
 };

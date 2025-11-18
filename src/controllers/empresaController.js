@@ -1,9 +1,10 @@
 // ====================================================
-// 🧩 CONTROLLER: EMPRESA (com logs)
+// 🧩 CONTROLLER: EMPRESA (com logs e URL pública da logo)
 // ====================================================
 
 const empresaRepo = require("../repositories/empresaRepo");
 const { registrarLog } = require("../repositories/logRepo");
+require("dotenv").config();
 
 // ====================================================
 // 📋 LISTAR TODAS AS EMPRESAS
@@ -65,6 +66,12 @@ async function criar(req, res) {
             return res.status(400).json({ erro: "O campo 'razao_social' é obrigatório." });
         }
 
+        // 🖼️ Montar URL pública da logo (caso enviada)
+        const baseUrl = process.env.BASE_URL || "http://localhost:4000";
+        const logoPublicUrl = req.file
+            ? `${baseUrl}/uploads/logos/${req.file.filename}`
+            : logo_url || null;
+
         const dados = {
             razao_social: razao_social.trim(),
             nome_fantasia: nome_fantasia || null,
@@ -80,7 +87,7 @@ async function criar(req, res) {
             cep: cep || null,
             tipo: tipo || "Matriz",
             matriz_id: matriz_id || null,
-            logo_url: logo_url || null
+            logo_url: logoPublicUrl
         };
 
         const nova = await empresaRepo.criar(dados);
@@ -124,6 +131,12 @@ async function atualizar(req, res) {
         const existente = await empresaRepo.buscarPorId(id);
         if (!existente) {
             return res.status(404).json({ erro: "Empresa não encontrada" });
+        }
+
+        // 🖼️ Atualizar logo se enviada
+        const baseUrl = process.env.BASE_URL || "http://localhost:4000";
+        if (req.file) {
+            dados.logo_url = `${baseUrl}/uploads/logos/${req.file.filename}`;
         }
 
         const atualizada = await empresaRepo.atualizar(id, dados);

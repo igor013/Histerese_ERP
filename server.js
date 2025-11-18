@@ -35,6 +35,7 @@ app.get("/", (req, res) => {
 
 // Login e criação de usuários são rotas públicas
 app.use("/api/usuarios", require("./src/routes/usuarioRoutes"));
+app.use("/api/public/empresas", require("./src/routes/publicEmpresaRoutes"));
 
 // ====================================================
 // 🔐 ROTAS PROTEGIDAS (JWT)
@@ -47,6 +48,7 @@ app.use("/api/notas", authMiddleware, require("./src/routes/notaRoutes"));
 app.use("/api/equipamentos", authMiddleware, require("./src/routes/equipamentoRoutes"));
 app.use("/api/grupos", authMiddleware, require("./src/routes/grupoRoutes"));
 app.use("/api/fornecedores", authMiddleware, require("./src/routes/fornecedorRoutes"));
+app.use("/api/fornecedores-bancos", authMiddleware, require("./src/routes/fornecedorBancarioRoutes")); // ✅ nova rota
 app.use("/api/upload", authMiddleware, require("./src/routes/uploadRoutes"));
 app.use("/api/backup", authMiddleware, require("./src/routes/backupRoutes"));
 app.use("/api/servicos", authMiddleware, require("./src/routes/servicoRoutes"));

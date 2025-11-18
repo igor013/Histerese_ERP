@@ -1,21 +1,32 @@
-// ====================================================
-// 👤 Histerese ERP - Rotas: Usuários
-// ====================================================
-
+// src/routes/usuarioRoutes.js
 const express = require("express");
 const router = express.Router();
-const usuarioController = require("../controllers/usuarioController");
+const ctrl = require("../controllers/usuarioController");
 const authMiddleware = require("../middlewares/authMiddleware");
 
-// 🧩 Rotas públicas
-router.post("/", usuarioController.criar);
-router.post("/login", usuarioController.login); // 🔑 login público
+// ====================================================
+// 🧾 Rota pública: LOGIN
+// ====================================================
+router.post("/login", ctrl.login);
 
-// 🛡️ Rotas protegidas
-router.get("/", authMiddleware, usuarioController.listar);
-router.get("/:id", authMiddleware, usuarioController.buscarPorId);
-router.put("/:id", authMiddleware, usuarioController.atualizar);
-router.delete("/:id", authMiddleware, usuarioController.excluir);
-router.patch("/:id/status", authMiddleware, usuarioController.alterarStatus);
+// ====================================================
+// 🔒 Rotas protegidas por token
+// ====================================================
+router.use(authMiddleware);
+
+// 🔹 Listar usuários
+router.get("/", ctrl.listar);
+
+// 🔹 Criar novo usuário
+router.post("/", ctrl.criar);
+
+// 🔹 Atualizar nome/login
+router.put("/:id", ctrl.atualizar);
+
+// 🔹 Alterar senha
+router.post("/:id/senha", ctrl.alterarSenha);
+
+// 🔹 Exclusão lógica
+router.delete("/:id", ctrl.excluir);
 
 module.exports = router;

@@ -2,18 +2,12 @@
 // 📦 ROTAS: PRODUTOS
 // ====================================================
 // Define os endpoints relacionados à tabela "produtos"
-// Todas as rotas exigem autenticação JWT
+// Todas as rotas exigem autenticação JWT (já aplicada no server.js)
 // ====================================================
 
 const express = require("express");
 const router = express.Router();
 const produtoController = require("../controllers/produtoController");
-const authMiddleware = require("../middlewares/authMiddleware");
-
-// ====================================================
-// 🔒 Middleware global de autenticação
-// ====================================================
-router.use(authMiddleware);
 
 // ====================================================
 // 🧩 ROTAS
@@ -23,7 +17,7 @@ router.use(authMiddleware);
 // POST /api/produtos
 router.post("/", produtoController.criar);
 
-// Listar produtos
+// Listar produtos (com paginação e busca ?q=)
 // GET /api/produtos
 router.get("/", produtoController.listar);
 
@@ -38,6 +32,10 @@ router.put("/:id", produtoController.atualizar);
 // Exclusão lógica
 // DELETE /api/produtos/:id
 router.delete("/:id", produtoController.excluir);
+
+// Restaurar produto inativo
+// PUT /api/produtos/:id/restaurar
+router.put("/:id/restaurar", produtoController.restaurar);
 
 // ====================================================
 // 📘 EXPORTAÇÃO DO MÓDULO

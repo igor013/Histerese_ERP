@@ -1,96 +1,88 @@
-// ====================================================
-// 👤 Histerese ERP - Repository: Usuários (versão final estável)
-// ====================================================
-
-const db = require("../config/db");
+// src/repositories/usuarioRepo.js
+const pool = require("../config/db");
 
 // ====================================================
-// ➕ Criar novo usuário
+// ➕ Criar usuário
 // ====================================================
 async function criar({ nome, login, senha_hash, empresa_id }) {
   const query = `
-        INSERT INTO usuarios (nome, login, senha, empresa_id)
-        VALUES ($1, $2, $3, $4)
-        RETURNING id, nome, login, empresa_id, status, criado_em;
+        INSERT INTO usuarios (nome, login, senha, empresa_id, status, criado_em, atualizado_em)
+        VALUES ($1, $2, $3, $4, 'ativo', NOW(), NOW())
+        RETURNING *;
     `;
   const values = [nome, login, senha_hash, empresa_id];
-  const { rows } = await db.query(query, values);
+  const { rows } = await pool.query(query, values);
   return rows[0];
 }
 
 // ====================================================
-// 🔍 Buscar usuário por login (dentro da mesma empresa)
+// 🔍 Buscar por login (compatível com login antigo)
 // ====================================================
 async function buscarPorLogin(login, empresa_id) {
-  const query = `
-        SELECT * FROM usuarios
-        WHERE login = $1 AND empresa_id = $2
-        LIMIT 1;
+  let query = `
+        SELECT id, nome, login, senha, empresa_id, status
+        FROM usuarios
+        WHERE UPPER(login) = UPPER($1)
     `;
-  const values = [login, empresa_id];
-  const { rows } = await db.query(query, values);
+  const params = [login];
+  if (empresa_id) {
+    query += " AND empresa_id = $2";
+    params.push(empresa_id);
+  }
+
+  const { rows } = await pool.query(query, params);
   return rows[0];
 }
 
 // ====================================================
-// 📋 Listar usuários (filtrados por empresa)
-// ====================================================
-async function listar(empresa_id) {
-  const query = `
-        SELECT id, nome, login, empresa_id, status, criado_em, atualizado_em
-        FROM usuarios
-        WHERE empresa_id = $1 AND status != 'excluido'
-        ORDER BY id ASC;
-    `;
-  const { rows } = await db.query(query, [empresa_id]);
-  return rows;
-}
-
-// ====================================================
-// 🔍 Buscar usuário por ID
+// 🔍 Buscar por ID
 // ====================================================
 async function buscarPorId(id) {
+  const { rows } = await pool.query("SELECT * FROM usuarios WHERE id = $1", [id]);
+  return rows[0];
+}
+
+// ====================================================
+// 📋 Listar usuários (com filtro e empresa)
+// ====================================================
+async function listar(empresa_id, filtro = "") {
+  const search = `%${filtro}%`;
   const query = `
         SELECT id, nome, login, empresa_id, status, criado_em, atualizado_em
         FROM usuarios
-        WHERE id = $1;
+        WHERE empresa_id = $1
+        AND status = 'ativo'
+        AND (unaccent(nome) ILIKE unaccent($2) OR unaccent(login) ILIKE unaccent($2))
+        ORDER BY id DESC;
     `;
-  const { rows } = await db.query(query, [id]);
-  return rows[0];
+  const { rows } = await pool.query(query, [empresa_id, search]);
+  return rows;
 }
 
 // ====================================================
 // ✏️ Atualizar usuário
 // ====================================================
-async function atualizar(id, { nome, login, senha_hash }) {
+async function atualizar(id, dados) {
   const campos = [];
   const valores = [];
-  let i = 1;
+  let i = 0;
 
-  if (nome) {
-    campos.push(`nome = $${i++}`);
-    valores.push(nome);
-  }
-  if (login) {
-    campos.push(`login = $${i++}`);
-    valores.push(login);
-  }
-  if (senha_hash) {
-    campos.push(`senha = $${i++}`);
-    valores.push(senha_hash);
+  for (const [chave, valor] of Object.entries(dados)) {
+    i++;
+    campos.push(`${chave} = $${i}`);
+    valores.push(valor);
   }
 
-  if (campos.length === 0) return null;
-
-  const query = `
-        UPDATE usuarios
-        SET ${campos.join(", ")}, atualizado_em = CURRENT_TIMESTAMP
-        WHERE id = $${i}
-        RETURNING id, nome, login, empresa_id, status, atualizado_em;
-    `;
   valores.push(id);
 
-  const { rows } = await db.query(query, valores);
+  const sql = `
+        UPDATE usuarios
+        SET ${campos.join(", ")}, atualizado_em = NOW()
+        WHERE id = $${i + 1}
+        RETURNING *;
+    `;
+
+  const { rows } = await pool.query(sql, valores);
   return rows[0];
 }
 
@@ -98,39 +90,18 @@ async function atualizar(id, { nome, login, senha_hash }) {
 // 🗑️ Exclusão lógica
 // ====================================================
 async function excluir(id) {
-  const query = `
-        UPDATE usuarios
-        SET status = 'excluido', atualizado_em = CURRENT_TIMESTAMP
-        WHERE id = $1
-        RETURNING id, nome, login, empresa_id, status;
-    `;
-  const { rows } = await db.query(query, [id]);
+  const { rows } = await pool.query(
+    `UPDATE usuarios SET status = 'inativo', atualizado_em = NOW() WHERE id = $1 RETURNING *;`,
+    [id]
+  );
   return rows[0];
 }
 
-// ====================================================
-// 🔁 Atualizar status
-// ====================================================
-async function atualizarStatus(id, status) {
-  const query = `
-        UPDATE usuarios
-        SET status = $1, atualizado_em = CURRENT_TIMESTAMP
-        WHERE id = $2
-        RETURNING id, nome, login, empresa_id, status;
-    `;
-  const { rows } = await db.query(query, [status, id]);
-  return rows[0];
-}
-
-// ====================================================
-// 📦 Exportação
-// ====================================================
 module.exports = {
   criar,
   buscarPorLogin,
-  listar,
   buscarPorId,
+  listar,
   atualizar,
   excluir,
-  atualizarStatus
 };
